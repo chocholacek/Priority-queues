@@ -8,7 +8,7 @@
  */
 
 namespace PriorityQueues {
-template< typename T, std::size_t ary >
+template< typename T, std::size_t ary, typename Compare >
 class explicit_heap {
     std::vector< T > _data;
 
@@ -22,7 +22,7 @@ class explicit_heap {
         if (end >= _data.size())
             end = _data.size() - 1;
         for (;begin <= end; ++begin) {
-            if (_data[begin] < _data[smallest]) {
+            if (Compare()(_data[begin], _data[smallest])) {
                 smallest = begin;
             }
         }
@@ -43,7 +43,7 @@ class explicit_heap {
 
     void decrease_key() {
         std::size_t i = _data.size() - 1;
-        while (i > 0 && _data[parent(i)] > _data[i]) {
+        while (i > 0 && Compare()(_data[i], _data[parent(i)])) {
             std::swap(_data[parent(i)], _data[i]);
             i = parent(i);
         }
