@@ -1,0 +1,2 @@
+add_executable(circular_ll_tests circular_ll_tests.cpp circular_linked_list.hpp)
+add_executable(fibbonaci_heap_tests fibbonaci_heap_tests.cpp fibonnaci_heap.hpp)

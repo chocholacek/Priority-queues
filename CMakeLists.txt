@@ -20,3 +20,4 @@ elseif (${CMAKE_CXX_COMPILER_ID} STREQUAL MSVC)
 endif()
 
 add_subdirectory(Explicit-heap)
+add_subdirectory(Fibonacci-heap)
