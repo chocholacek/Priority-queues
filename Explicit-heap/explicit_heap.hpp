@@ -12,7 +12,9 @@ template< typename T, std::size_t ary, typename Compare >
 class explicit_heap {
     std::vector< T > _data;
 
-    std::size_t parent(std::size_t index) { return (index - 1) / ary; }
+    std::size_t parent(std::size_t index) {
+        return (index - 1) / ary;
+    }
 
     std::size_t min(std::size_t index) {
         std::size_t begin = ary * index + 1,
