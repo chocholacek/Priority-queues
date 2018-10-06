@@ -74,12 +74,12 @@ TEST_CASE("Reversed - insert") {
 }
 
 
-TEST_CASE("Normal - extract_min") {
+TEST_CASE("Normal - extract") {
     vector_t type = vector_t::normal;
 
     SECTION("binary") {
         auto h = generate_min_heap< 2 >(5, type);
-        int min = h.extract_min();
+        int min = h.extract();
         vector expected = {1, 3, 2, 4};
         CHECK(min == 0);
         CHECK(h == expected);
@@ -89,7 +89,7 @@ TEST_CASE("Normal - extract_min") {
         auto h = generate_min_heap< 4 >(10, type);
         vector expected = {1, 5, 2, 3, 4, 9, 6, 7, 8};
 
-        int min = h.extract_min();
+        int min = h.extract();
 
         CHECK(min == 0);
         CHECK(h == expected);
@@ -97,14 +97,14 @@ TEST_CASE("Normal - extract_min") {
 }
 
 
-TEST_CASE("Reversed - extract_min") {
+TEST_CASE("Reversed - extract") {
     vector_t type = vector_t::reversed;
 
     SECTION("binary") {
         auto h = generate_min_heap< 2 >(5, type);
         vector expected = {1, 2, 3, 4};
 
-        int min = h.extract_min();
+        int min = h.extract();
 
         CHECK(min == 0);
         CHECK(h == expected);
@@ -114,7 +114,7 @@ TEST_CASE("Reversed - extract_min") {
         auto h = generate_min_heap< 4 >(10, type);
         vector expected = {1, 2, 8, 7, 6, 9, 5, 4, 3};
 
-        int min = h.extract_min();
+        int min = h.extract();
 
         CHECK(min == 0);
         CHECK(h == expected);

@@ -59,7 +59,8 @@ public:
         decrease_key();
     }
 
-    T extract_min() {
+
+    T extract() {
         std::swap(_data.front(), _data.back());
         T min = std::move(_data.back());
         _data.pop_back();
