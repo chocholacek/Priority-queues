@@ -21,3 +21,4 @@ endif()
 
 add_subdirectory(Explicit-heap)
 add_subdirectory(Fibonacci-heap)
+add_subdirectory(Implicit-heap)

@@ -3,10 +3,6 @@
 #include <cstdlib>
 #include <vector>
 
-/**
- * Implementation of Max Heap
- */
-
 namespace PriorityQueues {
 template< typename T, std::size_t ary, typename Compare >
 class explicit_heap {
