@@ -1,0 +1,1 @@
+add_executable(graph graph.cpp graph.hpp)
