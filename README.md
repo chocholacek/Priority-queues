@@ -6,4 +6,4 @@ queues included:
 - [X] Binomial heap
 - [X] Fibonacci heap
 - [X] Violation heap
-- [ ] RAnk-pairing heap
+- [ ] Rank-pairing heap
