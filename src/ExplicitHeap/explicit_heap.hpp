@@ -3,7 +3,7 @@
 #include <memory>
 #include <cmath>
 #include <functional>
-#include "../../base/HeapBase.hpp"
+#include "../base/HeapBase.hpp"
 
 namespace MC {
 
@@ -128,7 +128,11 @@ public:
 
     using NodeType = Node;
 
-    const Node& Min() const { return *root; }
+    const Node& Min() const {
+        if (!root)
+            EmptyException();
+        return *root;
+    }
 
     void Insert(int key, const Item& item) {
         if (!root) {
@@ -144,7 +148,7 @@ public:
         auto n = const_cast< Node &>(node);
 
         if (key > n.key)
-            throw;
+            InvalidKeyException();
 
         n.key = key;
         HeapifyUp(&n);

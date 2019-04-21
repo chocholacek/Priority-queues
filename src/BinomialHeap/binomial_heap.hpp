@@ -5,11 +5,12 @@
 #include <functional>
 #include <forward_list>
 
+#include "../base/HeapBase.hpp"
 
 namespace MC {
 
 template< typename Item >
-class BinomialHeap {
+class BinomialHeap : HeapBase {
 protected:
     struct Node;
 
@@ -50,7 +51,11 @@ protected:
 
 public:
 
-    const Node& Min() const { return *min; }
+    const Node& Min() const {
+        if (!min)
+            EmptyException();
+        return *min;
+    }
 
     void Insert(int k, const Item& i) {
         auto n = std::make_unique< Node >(k, i);
@@ -64,15 +69,16 @@ public:
     void DecreaseKey(const Node& node, int k) {
         auto* n = const_cast< Node* >(&node);
         if (k > n->key)
-            // TODO - better throw
-            throw;
+            InvalidKeyException();
 
         n->key = k;
         bubbleUp(n);
     }
 
-    // TODO - return type
     Item ExtractMin() {
+        if (!min)
+            EmptyException();
+
         Item i = min->item;
         promoteChildren(min);
         popMin();

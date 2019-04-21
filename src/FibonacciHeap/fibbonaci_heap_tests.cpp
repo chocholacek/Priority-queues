@@ -3,7 +3,7 @@
 #include "fibonacci_heap.hpp"
 
 
-using fibonacci_heap = PriorityQueues::FibonacciHeap< int >;
+using fibonacci_heap = MC::FibonacciHeap< int >;
 
 TEST_CASE("ctor") {
     fibonacci_heap f;

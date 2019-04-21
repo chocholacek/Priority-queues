@@ -6,9 +6,11 @@
 #include <vector>
 #include <optional>
 
-namespace PriorityQueues {
+#include "../base/HeapBase.hpp"
+
+namespace MC {
 template < typename Item >
-class FibonacciHeap {
+class FibonacciHeap : HeapBase {
     struct Node {
         int key;
         Item item;
@@ -70,7 +72,7 @@ public:
 
     const Node& Min() const {
         if (!_min)
-            throw std::logic_error("empty heap");
+            EmptyException();
 
         return *_min;
     }
@@ -93,7 +95,7 @@ public:
 
     Item ExtractMin() {
         if (!_min)
-             std::logic_error("empty heap");
+             EmptyException();
 
 
         Node* ret = _min;
@@ -119,7 +121,7 @@ public:
         auto x = const_cast< Node* >(&node);
 
         if (k > x->key)
-            throw std::logic_error("provided key is higher than stored key");
+            InvalidKeyException();
 
         x->key = k;
         Node* y = x->parent;

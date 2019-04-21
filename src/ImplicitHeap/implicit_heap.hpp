@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../../base/HeapBase.hpp"
+#include "../base/HeapBase.hpp"
 #include <memory>
 #include <functional>
 
@@ -19,7 +19,6 @@ class ImplicitHeap : public HeapBase {
     };
 
     std::vector< Node > array;
-
 
 
     int ParentIndex(int index) const { return (index - 1) / 2 ; }
@@ -68,11 +67,15 @@ class ImplicitHeap : public HeapBase {
     bool InBounds(int index) const { return index < array.size(); }
 
 public:
-    const Node& Min() const { return array.at(0); }
+    const Node& Min() const {
+        if (array.empty())
+            EmptyException();
+        return array[0];
+    }
 
     void DecreaseKey(int index, int key) {
         if (key > array[index].key)
-            throw;
+            InvalidKeyException();
 
         array[index].key = key;
 
