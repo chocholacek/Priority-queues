@@ -1,7 +1,9 @@
 # Bachelor thesis - Priority queues
 
 queues included:
-- [ ] binary implicit heap
-- binary explicit heap
-- binomial heap
-- fibonacci heap
+- [X] Binary implicit heap
+- [X] Binary explicit heap
+- [X] Binomial heap
+- [X] Fibonacci heap
+- [X] Violation heap
+- [ ] RAnk-pairing heap
