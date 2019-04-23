@@ -1,1 +1,1 @@
-add_executable(rp rp_heap_tests.cpp rp_heap.hpp)
+add_executable(rank_pairing_heap_tests rp_heap_tests.cpp rp_heap.hpp)

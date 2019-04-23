@@ -30,6 +30,14 @@ protected:
             parent = nullptr;
             return ResetNext();
         }
+
+        bool IsRoot() const {
+            return parent == nullptr;
+        }
+
+        void RecalculateRank() {
+            rank = left ? left->rank + 1 : 0;
+        }
     };
 
     Node* root = nullptr;
@@ -60,16 +68,16 @@ public:
         std::vector< Node* > buckets(MaxBuckets(), nullptr);
 
         // traverse children
-        for (auto n = root ->left; n != nullptr;) {
+        for (auto n = root->left; n != nullptr;) {
             auto next = n->ResetNextAndParent();
-            MultiPass(buckets, n);
+            MergeIntoBuckets(buckets, n);
             n = next;
         }
 
         // traverse roots
         for (auto n = root->next; n != root;) {
             auto next = n->ResetNext();
-            MultiPass(buckets, n);
+            MergeIntoBuckets(buckets, n);
             n = next;
         }
 
@@ -90,13 +98,54 @@ public:
         auto n = const_cast< Node* >(&node);
         n->key = key;
 
-        if (!n->parent) {
+        if (n->IsRoot()) {
             if (n->key < root->key)
                 root = n;
+            return;
+        }
+
+        auto p = n->parent;
+
+        if (n == p->left) {
+            p->left = n->next;
+            if (p->left)
+                p->left->parent = p;
+        } else {
+            p->next = n->next;
+            if (p->next)
+                p->next->parent = p;
+        }
+
+        n->ResetNextAndParent();
+        n->RecalculateRank();
+
+        AddToRootList(n);
+
+        if (p->IsRoot()) {
+            p->RecalculateRank();
+        } else {
+            ReduceRanks(p);
         }
     }
 
 private:
+
+    // type-1 rank reduction
+    void ReduceRanks(Node* n) {
+        while (!n->IsRoot()) {
+            int x = n->left ? n->left->rank : -1;
+            int y = n->next ? n->next->rank : -1;
+
+            int z = x != y ? std::max(x, y) : x + 1;
+
+            if (z >= n->rank)
+                break;
+
+            n->rank = z;
+            n = n->parent;
+
+        }
+    }
 
     void AddToRootList(Node* n) {
         if (!n)
@@ -135,7 +184,7 @@ private:
         return x;
     }
 
-    void MultiPass(std::vector< Node* >& buckets, Node* n) {
+    void MergeIntoBuckets(std::vector< Node* >& buckets, Node* n) {
         while (buckets[n->rank]) {
             auto b = buckets[n->rank];
             buckets[n->rank] = nullptr;

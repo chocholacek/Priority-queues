@@ -25,6 +25,9 @@ public:
         return i;
     }
 
+    void DecreaseKey(const Node& n, int k) {
+        REQUIRE_NOTHROW(RP::DecreaseKey(n, k));
+    }
 };
 
 std::vector< int > Random(std::size_t size) {
@@ -96,4 +99,17 @@ TEST_CASE("ExtractMin - random values") {
 
     IR(v);
     CR(ord);
+}
+
+TEST_CASE("DecreaseKey") {
+
+}
+
+TEST_CASE("kktina") {
+    Test t;
+
+    std::vector< std::reference_wrapper< const Test::Node > > inserts;
+
+    inserts.push_back(std::cref(t.Insert(0)));
+    t.DecreaseKey(inserts.back(), -1);
 }

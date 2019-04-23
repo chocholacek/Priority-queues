@@ -8,7 +8,7 @@ set(SINGLE_HEADER_LIBS_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/libs/include")
 # Configure compiler warnings
 if (CMAKE_CXX_COMPILER_ID MATCHES Clang OR ${CMAKE_CXX_COMPILER_ID} STREQUAL GNU)
   # using regular Clang or AppleClang or GCC
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++1z -Wall -Wextra -pedantic -Wold-style-cast")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++1z -Wall -Wextra -pedantic -Wold-style-cast -I Benchmarks/bricks")
   # the following two lines switch coverage analysis on
   # uncomment them if you want to use coverage analysis
   # set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} --coverage")
@@ -27,3 +27,4 @@ add_subdirectory(src/ViolationHeap)
 add_subdirectory(src/RankPairingHeap)
 add_subdirectory(TestData)
 add_subdirectory(src/helpers/queryable)
+add_subdirectory(Benchmarks)

@@ -67,6 +67,8 @@ class ImplicitHeap : public HeapBase {
     bool InBounds(int index) const { return index < array.size(); }
 
 public:
+    using Node = typename ImplicitHeap::Node;
+
     const Node& Min() const {
         if (array.empty())
             EmptyException();
