@@ -1,3 +1,9 @@
 cmake-build-debug/
+src/ImplicitHeap/build/
+src/ExplicitHeap/build/
+src/FibonacciHeap/build/
+src/BinomialHeap/build/
+src/ViolationHeap/build/
+src/RankPairingHeap/build/
 build/
 .idea/
