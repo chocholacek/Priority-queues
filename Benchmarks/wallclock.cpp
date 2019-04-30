@@ -1,100 +1,158 @@
-#define BRICK_BENCHMARK_REG
-#define BRICK_BENCHMARK_MAIN
 
-/* ./bench category:stack | gnuplot > soubor.pdf */
-
-#include <brick-benchmark>
 #include <ImplicitHeap/implicit_heap.hpp>
+#include <ExplicitHeap/explicit_heap.hpp>
+#include <FibonacciHeap/fibonacci_heap.hpp>
+#include <BinomialHeap/binomial_heap.hpp>
+#include <ViolationHeap/violation_heap.hpp>
+#include <RankPairingHeap/rp_heap.hpp>
 
 #include <functional>
 #include <random>
+#include <chrono>
+#include <fstream>
+#include <iostream>
 
+using std::ofstream;
+using std::chrono::high_resolution_clock;
+using std::chrono::microseconds;
+using std::chrono::milliseconds;
+using std::chrono::duration_cast;
 
-using namespace brick;
-using ImplicitHeap = MC::ImplicitHeap< int >;
+using TItem = int;
+using Implicit = MC::ImplicitHeap< TItem >;
+using Explicit = MC::ExplicitHeap< TItem >;
+using Fibonacci = MC::FibonacciHeap< TItem >;
+using Binomial = MC::BinomialHeap< TItem >;
+using Violation = MC::ViolationHeap< TItem >;
+using RPHeap = MC::RankPairingHeap< TItem >;
 
-struct Wallclock : benchmark::Group {
-    Wallclock() : rng(r()) {
-        x.type = benchmark::Axis::Quantitative;
-        x.name = "Elements";
-        x.min = 1000;
-        x.max = 10000;
-
-        y.type = benchmark::Axis::Qualitative;
-        y.name = "heap";
-        y.min = 1;
-        y.max = 1;
-
-        y._render = [](int i) {
-            switch (i) {
-            case 1: return "binary (implicit)";
-            case 2: return "binary (explicit)";
-            }
-        };
-    }
-
-//    struct OP {
-//        enum Type {
-//
-//        };
-//
-//        Type type;
-//        int what;
-//        int to;
-//    };
-
-    enum class OP {
+struct OP {
+    enum type {
         Insert,
-        Extract,
-        Decrease
+        DecreaseKey
     };
 
-    void setup(int _p, int _q) override {
-        p = _p; q = _q;
-
-        rand = GenerateOperationSequence(p);
-    }
-
-
-    BENCHMARK(random) {
-        switch (q) {
-        case 1:  Random< ImplicitHeap >();
-        }
-    }
-
-    template < typename H >
-    void Random() {
-        H h;
-
-        using Node = typename H::Node;
-        using RW = std::reference_wrapper< Node >;
-        std::vector< RW > data;
-
-        for (auto op : rand) {
-            switch (op) {
-            case OP::Insert: {
-                int num = uid(rng);
-                data.push_back(std::cref(h.Insert(num, num)));
-            }
-            }
-        }
-    }
-
-    std::vector< OP > GenerateOperationSequence(int size) {
-        std::vector< OP > ret(size);
-
-        for (auto& op : ret) {
-            op = static_cast< OP >(uid(rng) % 3);
-        }
-
-        return ret;
-    }
-
-    std::random_device r;
-
-    std::mt19937_64 rng;
-
-    std::uniform_int_distribution< int > uid;
-
-    std::vector< OP > rand;
+    type op;
+    int value;
+    int key;
 };
+
+ofstream file("wallclock_results.json");
+high_resolution_clock timer;
+std::vector< OP > operations;
+
+std::random_device r;
+std::mt19937_64 rng(r());
+std::uniform_int_distribution< TItem > uid;
+
+std::string indent(int i) {
+    return std::string(i, '\t');
+}
+
+
+void AppendToFile(const std::string& line, int i) {
+    file << indent(i) << line << std::endl;
+}
+
+void AppendToFile(const std::vector< microseconds >& results, int i) {
+    file << indent(i) << "\"results\": [";
+    for (unsigned i = 0; i < results.size(); ++i) {
+        file << results[i].count();
+        if (i != results.size() - 1)
+            file << ", ";
+    }
+    file << "]," << std::endl;
+}
+
+void GenerateRandomSequence(int size) {
+    operations.resize(size);
+    for (auto& op : operations) {
+
+        op.op = static_cast< OP::type >(uid(rng));
+        op.value = uid(rng);
+        op.key = uid(rng);
+    }
+}
+
+template < typename T >
+microseconds RunOperations() {
+    using Node = typename T::NodeType;
+
+    std::vector< const Node* > inserted;
+
+    T heap;
+
+    auto start = timer.now();
+    for (auto op : operations) {
+        try {
+
+            switch (op.op) {
+            case OP::Insert:
+                inserted.push_back(heap.Insert(op.key, op.value));
+                break;
+            case OP::DecreaseKey: {
+                if (inserted.empty()) {
+                    continue;
+                }
+
+                auto n = inserted[op.value % inserted.size()];
+                int k = n->key > op.key ? op.key : n->key - 1;
+                heap.DecreaseKey(n, k);
+                break;
+            }
+            }
+
+        } catch (const std::logic_error&) {}
+    }
+
+    auto end = timer.now();
+
+    return duration_cast< microseconds >(end - start);
+}
+
+template < typename T >
+void Benchmark(int iterations, int sequence) {
+    std::vector< microseconds > results(iterations);
+    auto n = T().Name;
+
+    std::cout << "Benchmark - " << n << ": ";
+    std::flush(std::cout);
+
+    auto start = timer.now();
+
+
+    AppendToFile("\"" + n + "\": {", 1);
+
+    for (int i = 0; i < iterations; ++i) {
+        GenerateRandomSequence(sequence);
+        results[i] = RunOperations< T >();
+    }
+    AppendToFile(results, 2);
+
+    auto accum = std::accumulate(results.begin(), results.end(), 0.0, [](auto a, auto b) {
+        return a + b.count();
+    });
+
+    AppendToFile("\"average\": " + std::to_string(accum / results.size()), 2);
+    AppendToFile("}", 1);
+
+    auto end = timer.now();
+    std::cout << duration_cast< milliseconds >(end - start).count() / 1000.0 << " s" << std::endl;
+}
+
+
+int main() {
+
+    int runs = 1;
+    int sequence_size = 1000;
+
+    AppendToFile("{", 0);
+    Benchmark< Implicit >(runs, sequence_size);
+    Benchmark< Explicit >(runs, sequence_size);
+    Benchmark< Fibonacci >(runs, sequence_size);
+    Benchmark< Binomial >(runs, sequence_size);
+    Benchmark< Violation >(runs, sequence_size);
+    Benchmark< RPHeap >(runs, sequence_size);
+    AppendToFile("}", 0);
+    return 0;
+}

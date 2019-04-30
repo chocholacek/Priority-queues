@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cmath>
 #include <functional>
 #include "../base/HeapBase.hpp"
 
@@ -8,7 +9,7 @@ namespace MC {
 static int bin = 0;
 
 template<typename Item>
-class ViolationHeap : HeapBase {
+class ViolationHeap : public HeapBase {
 protected:
     struct Node {
         friend ViolationHeap;
@@ -111,14 +112,19 @@ protected:
         void Free() {
             while (child) {
                 child->Free();
-                child = child->next;
+                auto n = child->next;
                 delete child;
+                child = n;
             }
         }
     };
 
     Node* roots = nullptr;
 public:
+
+    using NodeType = ViolationHeap::Node;
+
+    ViolationHeap() : HeapBase("Violation heap") {};
 
     const Node& Min() const {
         if (!roots)
@@ -127,19 +133,17 @@ public:
         return *roots;
     }
 
-    const Node& Insert(int key, const Item& item) {
+    const Node* Insert(int key, const Item& item) {
         auto n = new Node(key, item);
-
         Meld(n);
-
-        return *n;
+        return n;
     }
 
-    void DecreaseKey(const Node& node, int key) {
-        if (key > node.key)
+    void DecreaseKey(const Node* node, int key) {
+        if (key > node->key)
             InvalidKeyException();
 
-        auto n = const_cast< Node* >(&node);
+        auto n = const_cast< Node* >(node);
         n->key = key;
 
         if (n->IsRoot()) {
@@ -251,6 +255,7 @@ private:
         auto n = roots;
         do {
             auto m = n->next;
+            n->Free();
             delete n;
             n = m;
         } while (n != roots);

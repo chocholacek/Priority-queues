@@ -10,7 +10,7 @@
 
 namespace MC {
 template < typename Item >
-class FibonacciHeap : HeapBase {
+class FibonacciHeap : public HeapBase {
     struct Node {
         int key;
         Item item;
@@ -67,8 +67,9 @@ class FibonacciHeap : HeapBase {
 
 public:
 
-    using keyitem = std::pair< int, const Item& >;
-    using optional = std::optional< keyitem >;
+    using NodeType = FibonacciHeap::Node;
+
+    FibonacciHeap() : HeapBase("Fibonacci heap") {}
 
     const Node& Min() const {
         if (!_min)
@@ -77,20 +78,21 @@ public:
         return *_min;
     }
 
-    void Insert(int key, const Item& item) {
+    const Node* Insert(int key, const Item& item) {
         Node* n = new Node(key, item);
         ++_count;
         ++_root_size;
 
         if (_min == nullptr) {
             _min = n;
-            return;
+            return _min;
         }
 
         _min->AddSibling(n);
         if (n->key < _min->key) {
             _min = n;
         }
+        return _min;
     }
 
     Item ExtractMin() {
@@ -117,8 +119,8 @@ public:
 
     }
 
-    void DecreaseKey(const Node& node, int k) {
-        auto x = const_cast< Node* >(&node);
+    void DecreaseKey(const Node* node, int k) {
+        auto x = const_cast< Node* >(node);
 
         if (k > x->key)
             InvalidKeyException();

@@ -5,7 +5,7 @@
 namespace MC {
 
 template < typename Item >
-class RankPairingHeap : HeapBase {
+class RankPairingHeap : public HeapBase {
 protected:
     struct Node {
         int key;
@@ -38,14 +38,29 @@ protected:
         void RecalculateRank() {
             rank = left ? left->rank + 1 : 0;
         }
+
+        void Free() {
+            if (left) {
+                left->Free();
+                delete left;
+            }
+
+            if (!IsRoot() && next) {
+                next->Free();
+                delete next;
+            }
+
+        }
     };
 
     Node* root = nullptr;
     std::size_t size = 0;
 
 public:
-
+    using NodeType = RankPairingHeap::Node;
     using ItemType = Item;
+
+    RankPairingHeap() : HeapBase("Rank-pairing heap") {}
 
     const Node& Min() const {
         if (!root)
@@ -53,12 +68,12 @@ public:
         return *root;
     }
 
-    const Node& Insert(int key,const Item& item) {
+    const Node* Insert(int key,const Item& item) {
         auto n = new Node(key, item);
         AddToRootList(n);
         ++size;
 
-        return *n;
+        return n;
     }
 
     Item ExtractMin() {
@@ -91,11 +106,11 @@ public:
         return i;
     }
 
-    void DecreaseKey(const Node& node, int key) {
-        if (key > node.key)
+    void DecreaseKey(const Node* node, int key) {
+        if (key > node->key)
             InvalidKeyException();
 
-        auto n = const_cast< Node* >(&node);
+        auto n = const_cast< Node* >(node);
         n->key = key;
 
         if (n->IsRoot()) {
@@ -128,7 +143,26 @@ public:
         }
     }
 
+    ~RankPairingHeap() {
+        FreeRoots();
+    }
+
 private:
+
+    void FreeRoots() {
+        if (!root)
+            return;
+
+        auto n = root;
+        do {
+            auto p = n->next;
+            n->Free();
+            delete n;
+            n = p;
+        } while (n != root);
+
+        root = nullptr;
+    }
 
     // type-1 rank reduction
     void ReduceRanks(Node* n) {

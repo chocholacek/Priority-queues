@@ -1,16 +1,16 @@
 #pragma once
 
+#include <algorithm>
 #include <memory>
 #include <vector>
 #include <functional>
-#include <forward_list>
 
 #include "../base/HeapBase.hpp"
 
 namespace MC {
 
 template< typename Item >
-class BinomialHeap : HeapBase {
+class BinomialHeap : public HeapBase {
 protected:
     struct Node;
 
@@ -47,9 +47,11 @@ protected:
 
     Node* min = nullptr;
 
-    int minIndex = -1;
-
 public:
+
+    using NodeType = BinomialHeap::Node;
+
+    BinomialHeap() : HeapBase("Binomial heap") {}
 
     const Node& Min() const {
         if (!min)
@@ -57,17 +59,17 @@ public:
         return *min;
     }
 
-    void Insert(int k, const Item& i) {
+    const Node* Insert(int k, const Item& i) {
         auto n = std::make_unique< Node >(k, i);
 
         if (!min || k < min->key)
             min = n.get();
 
-        attemptInsert(std::move(n));
+        return attemptInsert(std::move(n));
     }
 
-    void DecreaseKey(const Node& node, int k) {
-        auto* n = const_cast< Node* >(&node);
+    void DecreaseKey(const Node* node, int k) {
+        auto* n = const_cast< Node* >(node);
         if (k > n->key)
             InvalidKeyException();
 
@@ -95,17 +97,18 @@ protected:
         return std::move(a);
     }
 
-    void attemptInsert(unique&& ptr) {
+    Node* attemptInsert(unique&& ptr) {
         // degree is not occupied
         if (!roots[ptr->degree]) {
+            auto ret = ptr.get();
             roots[ptr->degree] = std::move(ptr);
-            return;
+            return ret;
         }
 
         // degree occupied, merge needed
         auto m = merge(std::move(ptr), std::move(roots[ptr->degree]));
         // recursively call on higher degree
-        attemptInsert(std::move(m));
+        return attemptInsert(std::move(m));
     }
 
     void bubbleUp(Node *n) {

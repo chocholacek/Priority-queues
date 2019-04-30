@@ -96,3 +96,18 @@ TEST_CASE("Reversed - extract") {
 
 }
 
+TEST_CASE("Decrease Key") {
+    heap h;
+    std::vector< const heap::NodeType* > inserted;
+
+    for (int i = 0 ; i < 10; ++i)
+        inserted.push_back(h.Insert(i, i));
+
+    h.DecreaseKey(inserted.back(), -1);
+
+
+
+    REQUIRE(h.Min().key == -1);
+    REQUIRE(h.Min().item == 9);
+}
+

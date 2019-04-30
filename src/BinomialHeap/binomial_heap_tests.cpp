@@ -24,7 +24,7 @@ struct test : bh {
         return std::any_of(bh::roots.begin(), bh::roots.end(), std::forward< F >(func));
     }
 
-    ftemplate < typename F >
+    template < typename F >
     auto where(F&& func) const {
         using rw = std::reference_wrapper< const unique >;
         std::vector< rw > sat(roots().size());

@@ -68,11 +68,12 @@ class ExplicitHeap : public HeapBase {
         return !IsRightChild(child, of);
     }
 
-    void HeapifyUp(Node* cur) {
+    Node* HeapifyUp(Node* cur) {
         while (cur != root.get() && cur->key < cur->parent->key) {
             cur->Swap(*cur->parent);
             cur = cur->parent;
         }
+        return cur;
     }
 
     void DeleteLast() {
@@ -125,8 +126,9 @@ class ExplicitHeap : public HeapBase {
 
 
 public:
-
     using NodeType = Node;
+
+    ExplicitHeap() : HeapBase("Explicit heap") {}
 
     const Node& Min() const {
         if (!root)
@@ -134,24 +136,24 @@ public:
         return *root;
     }
 
-    void Insert(int key, const Item& item) {
+    const Node* Insert(int key, const Item& item) {
         if (!root) {
             InsertRoot(key, item);
-            return;
+            return root.get();
         }
 
         InsertChild(key, item);
-        HeapifyUp(last);
+        return HeapifyUp(last);
     }
 
-    void DecreaseKey(const Node& node, int key) {
-        auto n = const_cast< Node &>(node);
+    void DecreaseKey(const Node* node, int key) {
+        auto n = const_cast< Node* >(node);
 
-        if (key > n.key)
+        if (key > n->key)
             InvalidKeyException();
 
-        n.key = key;
-        HeapifyUp(&n);
+        n->key = key;
+        HeapifyUp(n);
     }
 
     Item ExtractMin() {

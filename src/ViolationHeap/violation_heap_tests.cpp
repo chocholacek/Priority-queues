@@ -1,7 +1,7 @@
 #define CATCH_CONFIG_MAIN
 
 #include "../../catch/catch.hpp"
-#include "vh.hpp"
+#include "violation_heap.hpp"
 
 
 using vh = MC::ViolationHeap< int >;
@@ -15,7 +15,7 @@ struct Test : protected vh {
     vh& base;
     Test() : base(*this) {}
 
-    const auto& Insert(int k) {
+    const Node* Insert(int k) {
         return Insert(k, k);
     }
 
@@ -24,7 +24,7 @@ struct Test : protected vh {
         return vh::Min();
     }
 
-    void DecreaseKey(const Node& n, int k) {
+    void DecreaseKey(const Node* n, int k) {
         REQUIRE_NOTHROW(vh::DecreaseKey(n, k));
     }
 };
@@ -36,16 +36,16 @@ using Node = Test::Node;
 TEST_CASE("Insert") {
     Test t;
 
-    auto gm = [&t]() -> const Node& {
+    auto gm = [&t]() -> const Node & {
         return t.Min();
     };
 
     SECTION("simple - one item") {
-        auto& n = t.Insert(0, 0);
+        auto n = t.Insert(0);
 
-        REQUIRE(n.key == 0);
+        REQUIRE(n->key == 0);
 
-        auto& min = gm();
+        auto &min = gm();
 
         CHECK(min.key == 0);
         REQUIRE(min.next == &min);
@@ -53,29 +53,31 @@ TEST_CASE("Insert") {
         REQUIRE(min.child == nullptr);
     }
 
+
+
     SECTION("multiple - two items lesser first") {
-        auto& n = t.Insert(0, 0);
-        auto& m = t.Insert(1, 1);
+        auto n = t.Insert(0);
+        auto m = t.Insert(1);
 
-        REQUIRE(n.next == &m);
-        REQUIRE(m.next == &n);
+        REQUIRE(n->next == m);
+        REQUIRE(m->next == n);
 
-        CHECK(n.key == 0);
-        CHECK(m.key == 1);
+        CHECK(n->key == 0);
+        CHECK(m->key == 1);
 
         auto& min = gm();
         CHECK(min.key == 0);
     }
 
     SECTION("multiple - two items larger first") {
-        auto& m = t.Insert(1, 1);
-        auto& n = t.Insert(0, 0);
+        auto m = t.Insert(1);
+        auto n = t.Insert(0);
 
-        REQUIRE(n.next == &m);
-        REQUIRE(m.next == &n);
+        REQUIRE(n->next == m);
+        REQUIRE(m->next == n);
 
-        CHECK(n.key == 0);
-        CHECK(m.key == 1);
+        CHECK(n->key == 0);
+        CHECK(m->key == 1);
 
         auto& min = gm();
         CHECK(min.key == 0);
@@ -84,10 +86,10 @@ TEST_CASE("Insert") {
 
 TEST_CASE("DecreaseKey") {
     Test t;
-    auto& f = t.Insert(5, 5);
+    auto f = t.Insert(5);
 
     SECTION("single element - invalid key") {
-        REQUIRE_THROWS_AS(t.base.DecreaseKey(t.Min(), 10), std::logic_error);
+        REQUIRE_THROWS_AS(t.base.DecreaseKey(&t.Min(), 10), std::logic_error);
     }
 
     SECTION("single element - valid key") {
@@ -97,7 +99,7 @@ TEST_CASE("DecreaseKey") {
     }
 
     SECTION("multiple elements - no change") {
-        auto& s = t.Insert(10, 10);
+        auto s = t.Insert(10);
 
         t.DecreaseKey(s, 8);
 
@@ -109,7 +111,7 @@ TEST_CASE("DecreaseKey") {
     }
 
     SECTION("multiple elements - new min") {
-        auto& s = t.Insert(10, 10);
+        auto s = t.Insert(10);
 
         t.DecreaseKey(s, 0);
 
@@ -124,7 +126,7 @@ TEST_CASE("DecreaseKey") {
 TEST_CASE("ExtractMin") {
     SECTION("Simple") {
         Test t;
-        auto& n = t.Insert(0, 0);
+        auto n = t.Insert(0);
         int i = t.base.ExtractMin();
         REQUIRE_THROWS(t.base.Min());
         CHECK(i == 0);

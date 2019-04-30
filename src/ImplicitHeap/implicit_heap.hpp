@@ -3,6 +3,7 @@
 #include "../base/HeapBase.hpp"
 #include <memory>
 #include <functional>
+#include <vector>
 
 
 namespace MC {
@@ -67,7 +68,9 @@ class ImplicitHeap : public HeapBase {
     bool InBounds(int index) const { return index < array.size(); }
 
 public:
-    using Node = typename ImplicitHeap::Node;
+    using NodeType = typename ImplicitHeap::Node;
+
+    ImplicitHeap() : HeapBase("Implicit heap") {}
 
     const Node& Min() const {
         if (array.empty())
@@ -75,25 +78,13 @@ public:
         return array[0];
     }
 
-    void DecreaseKey(int index, int key) {
-        if (key > array[index].key)
-            InvalidKeyException();
-
-        array[index].key = key;
-
-        while (index > 0 && array[index].key < Parent(index).key) {
-            std::swap(array[index], Parent(index));
-            index = ParentIndex(index);
-        }
+    void DecreaseKey(const Node* node, int key) {
+        DecreaseKey(node->index, key);
     }
 
-    void DecreaseKey(const Node& node, int key) {
-        DecreaseKey(node.index, key);
-    }
-
-    void Insert(int key, const Item& item) {
+    const Node* Insert(int key, const Item& item) {
         array.emplace_back(Infinity, item, array.size());
-        DecreaseKey(array.back(), key);
+        return &array[DecreaseKey(array.size() - 1, key)];
     }
 
     Item ExtractMin() {
@@ -105,6 +96,21 @@ public:
     }
 
     std::vector< Node > Elements() const { return array; }
+
+private:
+    int DecreaseKey(int index, int key) {
+        if (key > array[index].key)
+            InvalidKeyException();
+
+        array[index].key = key;
+
+        while (index > 0 && array[index].key < Parent(index).key) {
+            std::swap(array[index], Parent(index));
+            index = ParentIndex(index);
+        }
+
+        return index;
+    }
 };
 
 }

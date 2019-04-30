@@ -15,7 +15,7 @@ public:
         return RP::Min();
     }
 
-    const Node& Insert(int v) {
+    const Node* Insert(int v) {
         return RP::Insert(v, v);
     }
 
@@ -25,7 +25,7 @@ public:
         return i;
     }
 
-    void DecreaseKey(const Node& n, int k) {
+    void DecreaseKey(const Node* n, int k) {
         REQUIRE_NOTHROW(RP::DecreaseKey(n, k));
     }
 };
@@ -103,13 +103,4 @@ TEST_CASE("ExtractMin - random values") {
 
 TEST_CASE("DecreaseKey") {
 
-}
-
-TEST_CASE("kktina") {
-    Test t;
-
-    std::vector< std::reference_wrapper< const Test::Node > > inserts;
-
-    inserts.push_back(std::cref(t.Insert(0)));
-    t.DecreaseKey(inserts.back(), -1);
 }

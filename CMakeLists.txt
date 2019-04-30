@@ -19,6 +19,8 @@ elseif (${CMAKE_CXX_COMPILER_ID} STREQUAL MSVC)
   add_definitions("-D_CRT_SECURE_NO_WARNINGS")
 endif()
 
+add_library(base STATIC src/base/HeapBase.cpp)
+
 add_subdirectory(src/ExplicitHeap)
 add_subdirectory(src/FibonacciHeap)
 add_subdirectory(src/ImplicitHeap)
