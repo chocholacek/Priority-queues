@@ -19,7 +19,8 @@ class ImplicitHeap : public HeapBase {
                 : key(k), item(i), index(index) {}
     };
 
-    std::vector< Node > array;
+    // TODO fix
+    std::vector< std::unique_ptr< Node > > array;
 
 
     int ParentIndex(int index) const { return (index - 1) / 2 ; }
@@ -33,15 +34,15 @@ class ImplicitHeap : public HeapBase {
         return array[indexer(i)];
     }
 
-    Node& Parent(int index) {
+    std::unique_ptr< Node >& Parent(int index) {
         return array[ParentIndex(index)];
     }
 
-    Node& Left(int index) {
+    std::unique_ptr< Node >& Left(int index) {
         return array[LeftIndex(index)];
     }
 
-    Node& Right(int index) {
+    std::unique_ptr< Node >& Right(int index) {
         return array[RightIndex(index)];
     }
 
@@ -51,16 +52,17 @@ class ImplicitHeap : public HeapBase {
 
         int smallest = index;
 
-        if (InBounds(LeftIndex(index)) && Left(index).key < array[index].key) {
+        if (InBounds(LeftIndex(index)) && Left(index)->key < array[index]->key) {
             smallest = LeftIndex(index);
         }
 
-        if (InBounds(RightIndex(index)) && Right(index).key < array[smallest].key) {
+        if (InBounds(RightIndex(index)) && Right(index)->key < array[smallest]->key) {
             smallest = RightIndex(index);
         }
 
         if (smallest != index) {
             std::swap(array[index], array[smallest]);
+            std::swap(array[index]->index, array[smallest]->index);
             HeapifyDown(smallest);
         }
     }
@@ -70,12 +72,14 @@ class ImplicitHeap : public HeapBase {
 public:
     using NodeType = typename ImplicitHeap::Node;
 
-    ImplicitHeap() : HeapBase("Implicit heap") {}
+    ImplicitHeap() : HeapBase("Implicit heap") {
+        array.reserve(64);
+    }
 
     const Node& Min() const {
         if (array.empty())
             EmptyException();
-        return array[0];
+        return *array[0];
     }
 
     void DecreaseKey(const Node* node, int key) {
@@ -83,29 +87,35 @@ public:
     }
 
     const Node* Insert(int key, const Item& item) {
-        array.emplace_back(Infinity, item, array.size());
-        return &array[DecreaseKey(array.size() - 1, key)];
+        array.emplace_back(std::make_unique< Node >(Infinity, item, array.size()));
+        return array[DecreaseKey(array.size() - 1, key)].get();
     }
 
-    Item ExtractMin() {
-        auto item = Min().item;
+
+    std::unique_ptr< Node > ExtractMin() {
+        if (array.empty())
+            EmptyException();
+
         std::swap(array.front(), array.back());
+        std::swap(array.front()->index, array.back()->index);
+        auto ret = std::move(array.back());
         array.pop_back();
         HeapifyDown(0);
-        return item;
+        return ret;
     }
 
-    std::vector< Node > Elements() const { return array; }
+    const std::vector< std::unique_ptr< Node > >& Elements() const { return array; }
 
 private:
     int DecreaseKey(int index, int key) {
-        if (key > array[index].key)
+        if (key > array[index]->key)
             InvalidKeyException();
 
-        array[index].key = key;
+        array[index]->key = key;
 
-        while (index > 0 && array[index].key < Parent(index).key) {
+        while (index > 0 && array[index]->key < Parent(index)->key) {
             std::swap(array[index], Parent(index));
+            std::swap(array[index]->index, Parent(index)->index);
             index = ParentIndex(index);
         }
 

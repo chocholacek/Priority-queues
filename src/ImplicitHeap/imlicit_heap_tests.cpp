@@ -37,9 +37,9 @@ heap generate_heap(std::size_t vector_size, vector_t type) {
 }
 
 bool operator==(const heap& h, const vector& v) {
-    auto elems = h.Elements();
+    auto& elems = h.Elements();
     std::vector< int > keys(elems.size());
-    std::transform(elems.begin(), elems.end(), keys.begin(), [](const auto& b) { return b.key; });
+    std::transform(elems.begin(), elems.end(), keys.begin(), [](const auto& b) { return b->key; });
     return keys == v;
 }
 
@@ -71,9 +71,9 @@ TEST_CASE("Normal - extract") {
 
     SECTION("binary") {
         auto h = generate_heap(5, type);
-        int min = h.ExtractMin();
+        auto min = h.ExtractMin();
         vector expected = {1, 3, 2, 4};
-        CHECK(min == 0);
+        CHECK(min->key == 0);
         CHECK(h == expected);
     }
 
@@ -88,9 +88,9 @@ TEST_CASE("Reversed - extract") {
         auto h = generate_heap(5, type);
         vector expected = {1, 2, 3, 4};
 
-        int min = h.ExtractMin();
+        auto min = h.ExtractMin();
 
-        CHECK(min == 0);
+        CHECK(min->key == 0);
         CHECK(h == expected);
     }
 
