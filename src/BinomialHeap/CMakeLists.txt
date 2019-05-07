@@ -1,1 +1,1 @@
-add_executable(binomial_heap binomial_heap_tests.cpp binomial_heap.hpp ../base/HeapBase.cpp)
+add_executable(binomial_heap_tests binomial_heap_tests.cpp binomial_heap.hpp ../base/HeapBase.cpp)

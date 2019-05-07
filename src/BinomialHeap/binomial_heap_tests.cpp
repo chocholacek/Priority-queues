@@ -6,160 +6,151 @@ using namespace MC;
 using bh = BinomialHeap< int >;
 
 
-struct test : bh {
-    using node = bh::Node;
-    using unique = bh::unique;
-
-    const auto& roots() const {
-        return bh::roots;
+struct test : protected bh {
+    using Handle = const bh::Node*;
+    const auto& Min() {
+        REQUIRE_NOTHROW(bh::Min());
+        return bh::Min();
     }
 
-    template < typename F >
-    bool all(F&& func) const {
-        return std::all_of(bh::roots.begin(), bh::roots.end(), std::forward< F >(func));
+    const auto Insert(int v) {
+        return bh::Insert(v, v);
     }
 
-    template < typename F >
-    bool any(F&& func) const {
-        return std::any_of(bh::roots.begin(), bh::roots.end(), std::forward< F >(func));
+    void DK(Handle h, int k) {
+        REQUIRE_NOTHROW(bh::DecreaseKey(h, k));
     }
 
-    template < typename F >
-    auto where(F&& func) const {
-        using rw = std::reference_wrapper< const unique >;
-        std::vector< rw > sat(roots().size());
-        for (const auto& p : roots()) {
-            if (func()(p))
-                sat.emplace_back(std::cref(p));
-        }
-        return sat;
+    auto Ex() {
+        std::unique_ptr< bh::Node > ret;
+        REQUIRE_NOTHROW(ret = std::move(bh::ExtractMin()));
+        return ret;
     }
 };
 
-using node = test::node;
-using cnode = const node;
-using unique = test::unique;
-using cunique = const unique;
+using Handle = test::Handle;
 
 TEST_CASE("simple insert") {
     test t;
-    t.Insert(1, 1);
+    auto p = t.Insert(1);
+    auto& i = t.Min();
 
-    auto& r = t.roots();
-    REQUIRE(r[0]);
+    REQUIRE(p->key == i.key);
 
-    cunique& p = r[0];
     CHECK(p->degree == 0);
     CHECK(p->key == 1);
     CHECK(p->item == 1);
-    CHECK(p->children.empty());
+    CHECK(p->child == nullptr);
     CHECK(p->parent == nullptr);
+}
+
+template < typename N >
+void CheckPrevNext(const N* n, const N* prev = nullptr, const N* next = nullptr) {
+    CHECK(n->prev == prev);
+    CHECK(n->next == next);
 }
 
 TEST_CASE("multiple inserts") {
     test t;
-    auto& r = t.roots();
-    t.Insert(0, 0);
+    t.Insert(0);
 
     INFO("2 elements") {
 
-        t.Insert(1, 1);
+        auto p = t.Insert(1);
 
         // should look like:
-        // _   0
-        //     |
-        //     1
+        // 0
+        // |
+        // 1
 
-        REQUIRE(!r[0]);
-        REQUIRE(r[1]);
+        const auto& i = t.Min();
 
-        cunique& p = r[1];
-        CHECK(p->degree == 1);
-        CHECK(p->key == 0);
+        CHECK(i.degree == 1);
+        CHECK(i.key == 0);
 
         // child check
-        REQUIRE(!p->children.empty());
-        cnode& n = *p->children.back();
-        CHECK(n.key == 1);
-        REQUIRE(n.children.empty());
-        REQUIRE(n.parent == p.get());
+        REQUIRE(i.child != nullptr);
+        auto n = i.child;
+        CHECK(n->key == 1);
+        REQUIRE(n->child == nullptr);
+        REQUIRE(n->parent != nullptr);
+        REQUIRE(n->parent->key == 0);
     }
 
+
     INFO("3 elements") {
-        t.Insert(2, 2);
+        t.Insert(2);
 
         // should look like:
-        // 2   0
-        //     |
-        //     1
+        // 0   2
+        // |
+        // 1
 
-        REQUIRE(r[0]);
-        REQUIRE(r[1]);
-
-        cunique& d0 = r[0];
-        cunique& d1 = r[1];
+        const auto& p = t.Min();
+        auto n = p.next;
 
         // degree 0
-        CHECK(d0->degree == 0);
-        CHECK(d0->key == 2);
-        CHECK(d0->children.empty());
+        CHECK(n->degree == 0);
+        CHECK(n->key == 2);
+        CHECK(n->child == nullptr);
 
         // degree 1
-        CHECK(d1->degree == 1);
-        CHECK(d1->key == 0);
+        CHECK(p.degree == 1);
+        CHECK(p.key == 0);
 
         // child check
-        REQUIRE(!d1->children.empty());
-        cnode& n = *d1->children.back();
-        CHECK(n.key == 1);
-        REQUIRE(n.children.empty());
-        CHECK(n.parent == d1.get());
+        REQUIRE(p.child != nullptr);
+        auto c = p.child;
+        CHECK(c->key == 1);
+        REQUIRE(c->child == nullptr);
+        CHECK(c->parent->key == 0);
     }
 
     INFO("4 elements") {
-        t.Insert(3, 3);
+        t.Insert(3);
 
         // should look like this:
-        // _   _  0
-        //       /|
-        //      1 2
-        //        |
-        //        3
+        //   0
+        //  /
+        // 2 - 1
+        // |
+        // 3
 
-        REQUIRE(!r[0]);
-        REQUIRE(!r[1]);
-        REQUIRE(r[2]);
+        const auto& p = t.Min();
 
-        cunique& p = r[2];
-        REQUIRE(p->degree == 2);
-        CHECK(p->key == 0);
+        REQUIRE(p.degree == 2);
+        CHECK(p.key == 0);
+        CheckPrevNext(&p);
 
-        // child check
-        REQUIRE(p->children.size() == 2);
-        cnode& n0 = *p->children[0];
-        cnode& n1 = *p->children[1];
+        REQUIRE(p.child != nullptr);
+        auto c1 = p.child;
+        REQUIRE(c1->next);
+        auto c2 = c1->next;
 
-        // first child of '0'
-        REQUIRE(n0.degree == 0);
-        CHECK(n0.key == 1);
-        REQUIRE(n0.children.empty());
-        CHECK(n0.parent == p.get());
-
-        // second child of '0'
-        REQUIRE(n1.degree == 1);
-        CHECK(n1.key == 2);
-        REQUIRE(n1.children.size() == 1);
-        CHECK(n1.parent == p.get());
-        cnode& f = *n1.children[0];
-
-        // child of '2'
-        CHECK(f.degree == 0);
-        CHECK(f.key == 3);
-        CHECK(f.children.empty());
-        CHECK(f.parent == &n1);
+        REQUIRE(c1->key == 2);
+        REQUIRE(c2->key == 1);
     }
+
 }
 
+TEST_CASE("DecreaseKey") {
+    test t;
+    std::vector< Handle > inserts;
+    for (int i = 0; i < 8; ++i)
+        inserts.push_back(t.Insert(i));
+
+    t.DK(inserts.back(), -1);
+}
+
+TEST_CASE("Extract") {
+    test t;
+    std::vector< Handle > inserts;
+    for (int i = 0; i < 8; ++i)
+        inserts.push_back(t.Insert(i));
+    t.Ex();
+}
+
+/*
 TEST_CASE("Simple extract") {
     test t;
     t.Insert(0, 0);
@@ -181,3 +172,4 @@ TEST_CASE("ExtractMin") {
         CHECK(m == i);
     }
 }
+*/
