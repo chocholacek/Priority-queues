@@ -95,7 +95,7 @@ protected:
             int r2 = -1;
             if (child && child->next)
                 r2 = child->next->rank;
-            rank = std::ceil((r1 + r2) / 2) + 1;
+            rank = std::ceil((r1 + r2) / 2.0) + 1;
             return o;
         }
 
@@ -107,6 +107,25 @@ protected:
             }
         }
 
+    };
+
+    struct ZS {
+        std::array< Node*, 2 > data;
+        int count = 0;
+
+        void Add(Node* n) { data[count++] = n; }
+
+        Node* Last() noexcept { return data[count - 1]; }
+
+        Node* z1() const noexcept { return data[0]; }
+        Node* z2() const noexcept { return data[1]; }
+
+        ZS() : data({nullptr, nullptr}) {}
+
+        void Reset() {
+            count = 0;
+            data[1] = data[0] = nullptr;
+        }
     };
 
     Node* roots = nullptr;
@@ -162,10 +181,8 @@ public:
         }
 
         auto lc = n->ActiveChildWithLargetsRank();
-        auto curr = n;
         if (lc) {
             n->Replace(lc);
-            curr = lc;
         } else {
             if (parent && n == parent->child) {
                 parent->child = n->next;
@@ -174,18 +191,19 @@ public:
             }
 
             if (n->next) {
-                curr = n->next->prev = n->prev;
-            } else {
-                curr = parent;
+                n->next->prev = n->prev;
             }
         }
 
-        int oldRank = n->RecalculateRank();
+        n->RecalculateRank();
+        auto curr = parent;
+        if (curr) {
+            int oldRank = curr->RecalculateRank();
 
-
-        while (curr && curr->rank < oldRank && (parent = Node::IsActive(curr))) {
-            oldRank = parent->RecalculateRank();
-            curr = parent;
+            while (curr->rank < oldRank && (parent = Node::IsActive(curr))) {
+                oldRank = parent->RecalculateRank();
+                curr = parent;
+            }
         }
 
         n->prev = nullptr;
@@ -240,9 +258,9 @@ private:
         roots->next = act;
     }
 
-    void AddToRoots(const std::vector< Node* > nodes) {
-        for (auto n : nodes) {
-            n->prev = nullptr;
+    void AddToRoots(ZS& zs) {
+        for (;zs.count; --zs.count) {
+            auto n = zs.Last();
             n->next = n;
             AddToRoots(n);
             if (n->key < roots->key)
@@ -266,27 +284,21 @@ private:
         n->child = nullptr;
     }
 
+
+
     void Consolidate(Node* end) {
-        int bound = std::ceil(std::log2(count)) + 1;
         int mr = 0;
-//        std::vector< std::vector< Node* > > newRoots(bound);
-        
-        std::vector< Node* > newRoots(bound);
-        std::vector< Node* > tmp(count * 2);
+        unsigned bound = std::ceil(std::log2(count) + 1);
+        std::vector< ZS > tmp(bound);
 
-        auto act = roots;
+        auto z = roots;
         do {
-            auto next = act->next;
+            auto next = z->next;
 
-            auto z = act;
-            int r = z->rank;
-
-            while (newRoots[r].size() == 2) {
-                auto& v = newRoots[r];
-                auto z1 = v[0];
-                auto z2 = v[1];
-
-                v.clear();
+            ZS zs = tmp[z->rank];
+            while (zs.count == 2) {
+                auto z1 = zs.z1();
+                auto z2 = zs.z2();
 
                 if (z->key > z1->key)
                     std::swap(z, z1);
@@ -294,23 +306,28 @@ private:
                 if (z->key > z2->key)
                     std::swap(z, z2);
 
+                if (z1->rank > z2->rank)
+                    std::swap(z1, z2);
+
                 z->AddChild(z1);
                 z->AddChild(z2);
-                r = ++z->rank;
+
+                tmp[z->rank].Reset();
+                ++z->rank;
+                zs = tmp[z->rank];
             }
 
-            newRoots[r].push_back(z);
-            act = next;
+            tmp[z->rank].Add(z);
 
             if (z->rank > mr)
                 mr = z->rank;
-        } while (act != end);
+            z = next;
+        } while (z != end);
 
         roots = nullptr;
 
         for (int i = 0; i <= mr; ++i) {
-            auto& v = newRoots[i];
-            AddToRoots(v);
+            AddToRoots(tmp[i]);
         }
 
     }

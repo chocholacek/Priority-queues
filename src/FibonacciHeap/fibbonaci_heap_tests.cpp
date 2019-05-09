@@ -1,4 +1,6 @@
 #define CATCH_CONFIG_MAIN
+
+#include <random>
 #include "../../catch/catch.hpp"
 #include "fibonacci_heap.hpp"
 
@@ -36,17 +38,52 @@ TEST_CASE("extract") {
         f.Insert(i, i);
     }
     for (int i = 0; i < 4; ++i) {
-        int r;
+        std::unique_ptr< fibonacci_heap::NodeType > r;
         REQUIRE_NOTHROW(r = f.ExtractMin());
-        CHECK(r == i);
+        CHECK(r->key == i);
     }
 }
 TEST_CASE("kyssery") {
     fibonacci_heap f;
-//    f.insert(0, 0);
-//    f.insert(1, 1);
-//
-//    f.extract_min();
-//    f.extract_min();
+    std::random_device r;
+    std::mt19937_64 rng(r());
+    std::uniform_int_distribution< int > uid;
+
+    std::list< const fibonacci_heap::NodeType* > inserted;
+
+    for (int i = 0; i < 100000; ++i) {
+        try {
+            auto op = uid(rng) % 3;
+            switch (op) {
+            case 0: {
+                int k = uid(rng);
+                int v = uid(rng);
+                inserted.push_back(f.Insert(k, v));
+                break;
+            }
+            case 1: {
+                if (inserted.empty())
+                    continue;
+                int index = uid(rng) % inserted.size();
+                auto it = inserted.begin();
+                std::advance(it, index);
+                auto ptr = *it;
+                int k = uid(rng);
+                if (k > ptr->key)
+                    k = ptr->key - 1;
+                f.DecreaseKey(ptr, k);
+                break;
+            }
+            case 2: {
+                auto ptr = f.ExtractMin();
+                auto it  = std::find(inserted.begin(), inserted.end(), ptr.get());
+                if (it != inserted.end())
+                    inserted.erase(it);
+                break;
+            }
+            }
+        } catch (const std::logic_error&) {}
+
+    }
 }
 

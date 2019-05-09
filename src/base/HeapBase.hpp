@@ -11,7 +11,7 @@ public:
 
     const std::string Name;
 
-    HeapBase(const std::string& name) : Name(name) {}
+    explicit HeapBase(const std::string& name) : Name(name) {}
 
     void EmptyException() const {
         throw std::logic_error("empty heap");

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../base/HeapBase.hpp"
+#include <algorithm>
 
 namespace MC {
 
@@ -19,6 +20,11 @@ protected:
 
         Node(int k, const Item& i)
             : key(k), item(i) {}
+
+        Node* Reset() {
+            left = nullptr;
+            return ResetNextAndParent();
+        }
 
         Node* ResetNext() {
             auto n = next;
@@ -39,18 +45,16 @@ protected:
             rank = left ? left->rank + 1 : 0;
         }
 
-        void Free() {
+        ~Node() {
             if (left) {
-                left->Free();
                 delete left;
             }
 
             if (!IsRoot() && next) {
-                next->Free();
                 delete next;
             }
-
         }
+
     };
 
     Node* root = nullptr;
@@ -58,9 +62,12 @@ protected:
 
 public:
     using NodeType = RankPairingHeap::Node;
-    using ItemType = Item;
 
     RankPairingHeap() : HeapBase("Rank-pairing heap") {}
+
+    bool Empty() const {
+        return size == 0;
+    }
 
     const Node& Min() const {
         if (!root)
@@ -76,7 +83,7 @@ public:
         return n;
     }
 
-    Item ExtractMin() {
+    std::unique_ptr< Node > ExtractMin() {
         if (!root)
             EmptyException();
 
@@ -89,6 +96,8 @@ public:
             n = next;
         }
 
+        root->left = nullptr;
+
         // traverse roots
         for (auto n = root->next; n != root;) {
             auto next = n->ResetNext();
@@ -96,14 +105,13 @@ public:
             n = next;
         }
 
-        Item i = root->item;
-        Free(root);
+        std::unique_ptr< Node > ret(root);
         root = nullptr;
         std::for_each(buckets.begin(), buckets.end(), [this](auto n) {
             AddToRootList(n);
         });
 
-        return i;
+        return ret;
     }
 
     void DecreaseKey(const Node* node, int key) {
@@ -156,7 +164,6 @@ private:
         auto n = root;
         do {
             auto p = n->next;
-            n->Free();
             delete n;
             n = p;
         } while (n != root);

@@ -13,97 +13,140 @@ class ExplicitHeap : public HeapBase {
         int key;
         Item item;
 
-        Node* parent;
+        Node* parent = nullptr;
 
-        std::unique_ptr< Node > left;
-        std::unique_ptr< Node > right;
+        Node* left = nullptr;
+        Node* right = nullptr;
 
-        Node(int k, const Item& i, Node* p = nullptr) : key(k), item(i), parent(p) {}
+        Node(int k, const Item& i) : key(k), item(i) {}
 
-        void Swap(Node& n) {
-            Node tmp(key, item);
-            key = n.key;
-            item = n.item;
-            n.key = tmp.key;
-            n.item = tmp.item;
+        ~Node() {
+            delete left;
+            delete right;
         }
+
+        bool IsRightChild() const {
+            if (!parent)
+                return false;
+            return this == parent->right;
+        }
+
+        bool IsLeftChild() const {
+            if (!parent)
+                return false;
+            return this == parent->left;
+        }
+
     };
 
-    std::unique_ptr< Node > root;
+    Node* root = nullptr;
     Node* last = nullptr;
 
 
     void InsertRoot(int key, const Item &item) {
-        root = std::make_unique< Node >(key, item);
-        last = root.get();
+        last = root = new Node(key, item);
     }
 
     void InsertChild(int key, const Item &item) {
+        auto n = new Node(key, item);
+
         Node* cur = last;
-        while (cur != root.get() && IsRightChild(cur, cur->parent)) {
+        while (cur != root && cur->IsRightChild()) {
             cur = cur->parent;
         }
 
-        if (cur != root.get()) {
+        if (cur != root) {
             if (!cur->parent->right) {
-                cur->parent->right = std::make_unique< Node >(key, item, cur->parent);
-                last = cur->parent->right.get();
+                n->parent = cur->parent;
+                cur->parent->right = n;
+                last = cur->parent->right;
                 return;
             }
-            cur = cur->parent->right.get();
+            cur = cur->parent->right;
         }
 
         while (cur->left)
-            cur = cur->left.get();
+            cur = cur->left;
 
-        cur->left = std::make_unique< Node >(key, item, cur);
-        last = cur->left.get();
+        n->parent = cur;
+        cur->left = n;
+        last = cur->left;
     }
 
-    bool IsRightChild(Node* child, Node* of) const {
-        return child == of->right.get();
-    }
+    Node* Swap(Node* up, Node* lo) {
+        std::swap(up->left, lo->left);
+        std::swap(up->right, lo->right);
 
-    bool IsLeftChild(Node* child, Node* of) const {
-        return !IsRightChild(child, of);
+        lo->parent = up->parent;
+        up->parent = lo;
+
+        if (up->left)
+            up->left->parent = up;
+        if (up->right)
+            up->right->parent = up;
+
+        if (lo->parent) {
+            if (lo->parent->left == up)
+                lo->parent->left = lo;
+            else
+                lo->parent->right = lo;
+        } else {
+            root = lo;
+        }
+
+        if (lo->left == lo)
+            lo->left = up;
+        else
+            lo->right = up;
+
+        if (lo->left)
+            lo->left->parent = lo;
+        if (lo->right)
+            lo->right->parent = lo;
+
+        if (last == lo)
+            last = up;
+
+        return lo;
     }
 
     Node* HeapifyUp(Node* cur) {
-        while (cur != root.get() && cur->key < cur->parent->key) {
-            cur->Swap(*cur->parent);
-            cur = cur->parent;
+        while (cur != root && cur->key < cur->parent->key) {
+            cur = Swap(cur->parent, cur);
         }
         return cur;
     }
 
-    void DeleteLast() {
+    std::unique_ptr< Node > DeleteLast() {
         Node* cur = last;
 
-        if (cur == root.get()) {
-            root.reset();
-            last = nullptr;
-            return;
+        std::unique_ptr< Node > ret(last);
+
+        if (cur == root)  {
+            root = last = nullptr;
+            return ret;
         }
 
 
-        while (cur != root.get() && IsLeftChild(cur, cur->parent)) {
+        while (cur != root && cur->IsLeftChild()) {
             cur = cur->parent;
         }
 
-        if (cur != root.get()) {
-            cur = cur->parent->left.get();
+        if (cur != root) {
+            cur = cur->parent->left;
         }
 
         while (cur->right) {
-            cur = cur->right.get();
+            cur = cur->right;
         }
 
-        if (last == last->parent->left.get())
-            last->parent->left.reset();
+        if (last == last->parent->left)
+            last->parent->left = nullptr;
         else
-            last->parent->right.reset();
+            last->parent->right = nullptr;
 
         last = cur;
+        return ret;
     }
 
     void HeapifyDown(Node* n) {
@@ -113,22 +156,31 @@ class ExplicitHeap : public HeapBase {
         Node* smallest = n;
 
         if (n->left && n->left->key < n->key)
-            smallest = n->left.get();
+            smallest = n->left;
 
         if (n->right && n->right->key < smallest->key)
-            smallest = n->right.get();
+            smallest = n->right;
 
         if (smallest != n) {
-            n->Swap(*smallest);
-            HeapifyDown(smallest);
+            Swap(n, smallest);
+            HeapifyDown(n);
         }
     }
+
 
 
 public:
     using NodeType = Node;
 
     ExplicitHeap() : HeapBase("Explicit heap") {}
+
+    bool Empty() const {
+        return root == nullptr;
+    }
+
+    ~ExplicitHeap() {
+        delete root;
+    }
 
     const Node& Min() const {
         if (!root)
@@ -139,7 +191,7 @@ public:
     const Node* Insert(int key, const Item& item) {
         if (!root) {
             InsertRoot(key, item);
-            return root.get();
+            return root;
         }
 
         InsertChild(key, item);
@@ -156,15 +208,39 @@ public:
         HeapifyUp(n);
     }
 
-    Item ExtractMin() {
-        auto i = Min().item;
+    std::unique_ptr< Node > ExtractMin() {
+        if (!root)
+            EmptyException();
 
-        root->Swap(*last);
+        auto r = root;
+        last->left = r->left;
+        last->right = r->right;
+        r->left = nullptr;
+        r->right = nullptr;
 
-        DeleteLast();
+        if (last->left)
+            last->left->parent = last;
 
-        HeapifyDown(root.get());
-        return i;
+        if (last->right)
+            last->right->parent = last;
+
+        std::swap(last->parent, root->parent);
+
+        if (r->parent) {
+            if (r->parent->left == last)
+                r->parent->left = r;
+            else
+                r->parent->right = r;
+        }
+
+        root = last;
+        last = r;
+
+        auto ret = DeleteLast();
+
+        HeapifyDown(root);
+
+        return ret;
     }
 };
 

@@ -9,6 +9,10 @@
 #include "../base/HeapBase.hpp"
 
 namespace MC {
+
+template < typename Item >
+class BinomialHeap;
+
 template < typename Item >
 class FibonacciHeap : public HeapBase {
     struct Node {
@@ -17,20 +21,21 @@ class FibonacciHeap : public HeapBase {
         unsigned degree = 0;
         bool mark = false;
 
-        Node* next;
-        Node* prev;
+        Node* next = nullptr;
+        Node* prev = nullptr;
 
         Node* child = nullptr;
         Node* parent = nullptr;
 
-        template < typename I >
-        Node(int k, I&& i)
-                : key(k),
-                  item(std::forward< I >(i)) {
-            Reset();
+        Node(int k, const Item& i)
+                : key(k), item(i) {}
+
+        void ResetAll() {
+            ResetSiblings();
+            child = parent = nullptr;
         }
 
-        void Reset() {
+        void ResetSiblings() {
             next = prev = this;
         }
 
@@ -59,6 +64,21 @@ class FibonacciHeap : public HeapBase {
             prev->next = next;
             return this;
         }
+
+        bool IsAlone() const {
+            return this == next;
+        }
+
+        ~Node() {
+            if (child) {
+                auto act = child;
+                do {
+                    auto next = act->next;
+                    delete act;
+                    act = next;
+                } while (act != child);
+            }
+        }
     };
 
     Node* _min = nullptr;
@@ -71,6 +91,10 @@ public:
 
     FibonacciHeap() : HeapBase("Fibonacci heap") {}
 
+    bool Empty() const {
+        return _count == 0;
+    }
+
     const Node& Min() const {
         if (!_min)
             EmptyException();
@@ -79,43 +103,32 @@ public:
     }
 
     const Node* Insert(int key, const Item& item) {
-        Node* n = new Node(key, item);
+        auto n = new Node(key, item);
         ++_count;
-        ++_root_size;
 
-        if (_min == nullptr) {
-            _min = n;
-            return _min;
-        }
+        _add_to_root(n);
 
-        _min->AddSibling(n);
-        if (n->key < _min->key) {
-            _min = n;
-        }
-        return _min;
+        return n;
     }
 
-    Item ExtractMin() {
+    std::unique_ptr< Node > ExtractMin() {
         if (!_min)
              EmptyException();
 
-
-        Node* ret = _min;
         _move_children_to_root(_min);
         _min->Remove();
+        std::unique_ptr< Node > ret(_min);
+
         --_root_size;
-        if (ret == ret->next) {
+        if (_root_size == 0) {
             _min = nullptr;
         } else {
             _min = ret->next;
             _consolidate();
         }
         --_count;
-
-        Item i = ret->item;
-        ret->Reset();
-        _clear(ret);
-        return i;
+        ret->ResetAll();
+        return ret;
 
     }
 
@@ -127,7 +140,7 @@ public:
 
         x->key = k;
         Node* y = x->parent;
-        if (y != nullptr && x->key > y->key) {
+        if (y && x->key < y->key) {
             _cut(x, y);
             _cascading_cut(y);
         }
@@ -136,18 +149,24 @@ public:
     }
 
     ~FibonacciHeap() {
-        _clear(_min);
+        if (!_min)
+            return;
+        _clear();
     }
 
 
-private:
+protected:
+
+    template <typename > friend class BinomialHeap;
+    FibonacciHeap(const std::string& derived) : HeapBase(derived) {}
 
     void _consolidate() {
-        unsigned bound = std::log2(_count) + 1;
+        unsigned bound = std::ceil(std::log2(_count) + 1);
         std::vector< Node* > array(bound, nullptr);
         Node* actual = _min;
         for (;_root_size > 0; --_root_size) {
-            Node* x = actual;
+            auto x = actual;
+            auto n = x->next;
             unsigned d = x->degree;
 
             while (array[d] != nullptr) {
@@ -160,22 +179,12 @@ private:
             }
 
             array[d] = x;
-            actual = actual->next;
+            actual = n;
         }
 
         _min = nullptr;
-        for (unsigned i = 0; i < bound; ++i) {
-            if (array[i] != nullptr) {
-                ++_root_size;
-                if (_min == nullptr) {
-                    _min = array[i];
-                } else {
-                    _min->AddSibling(array[i]);
-                    if (array[i]->key < _min->key)
-                        _min = array[i];
-                }
-            }
-        }
+        for (auto r : array)
+            _add_to_root(r);
     }
 
     void _fib_heap_link(Node* y, Node* x) {
@@ -198,17 +207,6 @@ private:
         }
     }
 
-    void _clear(Node *n) {
-        if (n) {
-            auto act = n;
-            do {
-                auto d = act;
-                act = act->next;
-                _clear(d->child);
-                delete d;
-            } while (act != n);
-        }
-    }
 
 
     void _cut(Node* x, Node* y) {
@@ -222,20 +220,44 @@ private:
             y ->child = nullptr;
         }
 
-        _min->AddSibling(x);
+        _add_to_root(x);
         x->parent = nullptr;
         x->mark = false;
     }
 
     void _cascading_cut(Node* y) {
         Node* z = y->parent;
-        if (z != nullptr) {
+        if (z) {
             if (!y->mark) {
                 y->mark = true;
             } else {
                 _cut(y, z);
                 _cascading_cut(z);
             }
+        }
+    }
+
+    void _clear() {
+        auto act = _min;
+        for (; _root_size; --_root_size) {
+            auto n = act->next;
+            delete act;
+            act = n;
+        }
+        _count = 0;
+    }
+
+    void _add_to_root(Node* n) {
+        if (!n)
+            return;
+        ++_root_size;
+        n->ResetSiblings();
+        if (!_min) {
+            _min = n;
+        } else {
+            _min->AddSibling(n);
+            if (n->key < _min->key)
+                _min = n;
         }
     }
 };

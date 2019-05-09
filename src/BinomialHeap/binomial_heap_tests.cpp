@@ -7,7 +7,7 @@ using bh = BinomialHeap< int >;
 
 
 struct test : protected bh {
-    using Handle = const bh::Node*;
+    using Handle = const bh::NodeType*;
     const auto& Min() {
         REQUIRE_NOTHROW(bh::Min());
         return bh::Min();
@@ -22,7 +22,7 @@ struct test : protected bh {
     }
 
     auto Ex() {
-        std::unique_ptr< bh::Node > ret;
+        std::unique_ptr< bh::NodeType > ret;
         REQUIRE_NOTHROW(ret = std::move(bh::ExtractMin()));
         return ret;
     }

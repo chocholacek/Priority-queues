@@ -19,8 +19,8 @@ public:
         return RP::Insert(v, v);
     }
 
-    ItemType ExtractMin() {
-        ItemType i;
+    auto ExtractMin() {
+        std::unique_ptr< Node > i;
         REQUIRE_NOTHROW(i = RP::ExtractMin());
         return i;
     }
@@ -69,7 +69,7 @@ TEST_CASE("ExtractMin") {
     for (int i = 0; i < 5; ++i)
         t.Insert(i);
     for (int i = 0; i < 5; ++i)
-        REQUIRE(t.ExtractMin() == i);
+        REQUIRE(t.ExtractMin()->key == i);
 }
 
 auto InsertRange = [](auto& t, const auto& v) {
@@ -80,7 +80,7 @@ auto InsertRange = [](auto& t, const auto& v) {
 
 auto ExtractCheckRange = [](auto& t, const auto& v) {
     std::for_each(v.begin(), v.end(), [&t](const auto& i) {
-        CHECK(t.ExtractMin() == i);
+        CHECK(t.ExtractMin()->key == i);
     });
 };
 

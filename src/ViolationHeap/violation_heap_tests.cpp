@@ -84,6 +84,98 @@ TEST_CASE("Insert") {
     }
 }
 
+TEST_CASE("ExtractMin") {
+    SECTION("Simple") {
+        Test t;
+        auto n = t.Insert(0);
+        auto i = t.base.ExtractMin();
+        REQUIRE_THROWS(t.base.Min());
+        CHECK(i->key == 0);
+    }
+
+    Test t;
+    t.Insert(0);
+    t.Insert(1);
+    t.Insert(2);
+
+
+    SECTION("Complicated - 3 elements") {
+        auto i = t.base.ExtractMin();
+        CHECK(i->key == 0);
+
+        auto& m = t.Min();
+        REQUIRE(m.key == 1);
+        REQUIRE(m.next != nullptr);
+        CHECK(m.next->key == 2);
+        REQUIRE(m.next->next == &m);
+        REQUIRE(m.prev == nullptr);
+        REQUIRE(m.child == nullptr);
+    }
+
+    SECTION("Complicated - 4 elements") {
+        t.Insert(3);
+
+        auto i = t.base.ExtractMin();
+        CHECK(i->key == 0);
+
+        auto&m = t.Min();
+        REQUIRE(m.key == 1);
+//        REQUIRE(m.child != nullptr);
+//        auto c = m.child;
+//        CHECK(c->key == 3);
+//        REQUIRE(c->prev == &m);
+//        REQUIRE(c->next != nullptr);
+//        REQUIRE(c->child == nullptr);
+//
+//
+//        auto c2 = c->next;
+//        CHECK(c2->key == 2);
+//        REQUIRE(c2->prev == c);
+//        REQUIRE(c2->next == nullptr);
+//        REQUIRE(c2->child == nullptr);
+    }
+}
+
+//TEST_CASE("Node - Replace") {
+//    using Node = vh::NodeType;
+//
+//    Node r(0, 0);
+//    r.next = &r;
+//
+//    SECTION("First - son") {
+//        Node n(1, 1);
+//        Node m(2, 2);
+//        n.next = &m;
+//        m.prev = &n;
+//        n.prev = &r;
+//
+//        r.child = &n;
+//
+//        Node x(3, 3);
+//        x.prev = &n;
+//        n.child = &x;
+//        Node y(4, 4);
+//        x.next = &y;
+//        y.prev = &x;
+//
+////        n.Replace(&x);
+////        n.Replace(&y);
+//
+//        Node z(5, 5);
+//        z.prev = &m;
+//        m.child = &z;
+//
+//        Node a(6,6);
+//        a.prev = &z;
+//        z.next = &a;
+//
+//        m.Replace(&z);
+////        m.Replace(&a);
+//    }
+//
+//
+//}
+
 TEST_CASE("DecreaseKey") {
     Test t;
     auto f = t.Insert(5);
@@ -123,54 +215,4 @@ TEST_CASE("DecreaseKey") {
 
 }
 
-TEST_CASE("ExtractMin") {
-    SECTION("Simple") {
-        Test t;
-        auto n = t.Insert(0);
-        int i = t.base.ExtractMin();
-        REQUIRE_THROWS(t.base.Min());
-        CHECK(i == 0);
-    }
 
-    Test t;
-    t.Insert(0);
-    t.Insert(1);
-    t.Insert(2);
-
-
-    SECTION("Complicated - 3 elements") {
-        int i = t.base.ExtractMin();
-        CHECK(i == 0);
-
-        auto& m = t.Min();
-        REQUIRE(m.key == 1);
-        REQUIRE(m.next != nullptr);
-        CHECK(m.next->key == 2);
-        REQUIRE(m.next->next == &m);
-        REQUIRE(m.prev == nullptr);
-        REQUIRE(m.child == nullptr);
-    }
-
-    SECTION("Complicated - 4 elements") {
-        t.Insert(3);
-
-        int i = t.base.ExtractMin();
-        CHECK(i == 0);
-
-        auto&m = t.Min();
-        REQUIRE(m.key == 1);
-        REQUIRE(m.child != nullptr);
-        auto c = m.child;
-        CHECK(c->key == 3);
-        REQUIRE(c->prev == &m);
-        REQUIRE(c->next != nullptr);
-        REQUIRE(c->child == nullptr);
-
-
-        auto c2 = c->next;
-        CHECK(c2->key == 2);
-        REQUIRE(c2->prev == c);
-        REQUIRE(c2->next == nullptr);
-        REQUIRE(c2->child == nullptr);
-    }
-}

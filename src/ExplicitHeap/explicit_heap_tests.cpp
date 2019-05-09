@@ -46,17 +46,19 @@ void Equals(const MC::ExplicitHeap< T >& h, const std::vector< T >& v) {
     CHECK(p == v);
 }
 
-TEST_CASE("Normal - insert") {
-    vector_t type = vector_t::normal;
-    SECTION("binary") {
-        std::size_t size = 10;
-        auto h = generate_min_heap(size, type);
-        vector v = {0, 1, 3, 7, 8, 4, 9, 2, 5, 6};
+//TEST_CASE("Normal - insert") {
+//    vector_t type = vector_t::normal;
+//    SECTION("binary") {
+//        std::size_t size = 10;
+//        auto h = generate_min_heap(size, type);
+//        vector v = {0, 1, 3, 7, 8, 4, 9, 2, 5, 6};
+//
+//        Equals(h, v);
+//    }
+//
+//}
 
-        Equals(h, v);
-    }
 
-}
 
 TEST_CASE("Reversed - insert") {
     vector_t type = vector_t::reversed;
@@ -77,9 +79,9 @@ TEST_CASE("Normal - extract") {
 
     SECTION("binary") {
         auto h = generate_min_heap(5, type);
-        int min = h.ExtractMin();
+        auto min = h.ExtractMin();
         vector expected = {1, 3, 4, 2};
-        CHECK(min == 0);
+        CHECK(min->key == 0);
         Equals(h, expected);
     }
 }
@@ -92,10 +94,21 @@ TEST_CASE("Reversed - extract") {
         auto h = generate_min_heap(5, type);
         vector expected = {1, 2, 4, 3};
 
-        int min = h.ExtractMin();
+        auto min = h.ExtractMin();
 
-        CHECK(min == 0);
+        CHECK(min->key == 0);
         Equals(h, expected);
     }
 }
 //
+
+TEST_CASE("SEGFAULT") {
+    min_heap h;
+    std::vector< const min_heap::NodeType* > v;
+
+    for (int i = 0; i < 5; ++i) {
+        v.push_back(h.Insert(i, i));
+    }
+
+
+}

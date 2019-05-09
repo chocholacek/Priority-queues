@@ -19,7 +19,6 @@ class ImplicitHeap : public HeapBase {
                 : key(k), item(i), index(index) {}
     };
 
-    // TODO fix
     std::vector< std::unique_ptr< Node > > array;
 
 
@@ -46,11 +45,11 @@ class ImplicitHeap : public HeapBase {
         return array[RightIndex(index)];
     }
 
-    void HeapifyDown(int index) {
+    void HeapifyDown(std::size_t index) {
         if (index >= array.size())
             return;
 
-        int smallest = index;
+        std::size_t smallest = index;
 
         if (InBounds(LeftIndex(index)) && Left(index)->key < array[index]->key) {
             smallest = LeftIndex(index);
@@ -67,13 +66,12 @@ class ImplicitHeap : public HeapBase {
         }
     }
 
-    bool InBounds(int index) const { return index < array.size(); }
+    bool InBounds(std::size_t index) const { return index < array.size(); }
 
 public:
     using NodeType = typename ImplicitHeap::Node;
-
     ImplicitHeap() : HeapBase("Implicit heap") {
-        array.reserve(64);
+        array.reserve(4096);
     }
 
     const Node& Min() const {
@@ -91,6 +89,9 @@ public:
         return array[DecreaseKey(array.size() - 1, key)].get();
     }
 
+    bool Empty() const {
+        return array.empty();
+    }
 
     std::unique_ptr< Node > ExtractMin() {
         if (array.empty())
