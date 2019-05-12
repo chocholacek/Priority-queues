@@ -76,6 +76,16 @@ void GenerateRandomSequence(int size) {
     }
 }
 
+void GenerateRandomInserts(int size) {
+    operations.resize(size);
+    for (auto& op : operations) {
+
+        op.op = OP::type::Insert;
+        op.value = uid(rng);
+        op.key = uid(rng);
+    }
+}
+
 std::map< OP::type , std::string > opmap = {
         {OP::type::Insert, "I"},
         {OP::type::DecreaseKey, "D"},
@@ -137,8 +147,16 @@ microseconds RunOperations() {
     return duration_cast< microseconds >(end - start);
 }
 
+template < typename T, typename F >
+void Benchmark(int, int, F, bool log = false);
+
 template < typename T >
 void Benchmark(int iterations, int sequence, bool log = false) {
+    Benchmark< T >(iterations, sequence, GenerateRandomSequence, log);
+}
+
+template < typename T, typename F >
+void Benchmark(int iterations, int sequence, F gen, bool log) {
     std::vector< microseconds > results(iterations);
     auto n = T().Name;
 
@@ -151,7 +169,7 @@ void Benchmark(int iterations, int sequence, bool log = false) {
     AppendToFile("\"" + n + "\": {", 1);
 
     for (int i = 0; i < iterations; ++i) {
-        GenerateRandomSequence(sequence);
+        gen(sequence);
         if (log)
             LogOperations();
         results[i] = RunOperations< T >();
@@ -172,16 +190,28 @@ void Benchmark(int iterations, int sequence, bool log = false) {
 
 int main() {
 
-    int runs = 10;
-    int sequence_size = 100000;
+    int runs = 1000;
+    int sequence_size = 1000;
+
+    bool log = false;
 
     AppendToFile("{", 0);
-//    Benchmark< Implicit >(runs, sequence_size);
-//    Benchmark< Explicit >(runs, sequence_size);
-    Benchmark< Fibonacci >(runs, sequence_size);
-//    Benchmark< Binomial >(runs, sequence_size);
-    Benchmark< Violation >(runs, sequence_size);
-//    Benchmark< RPHeap >(runs, sequence_size);
+    Benchmark< Implicit >(runs, sequence_size, log);
+    Benchmark< Explicit >(runs, sequence_size, log);
+    Benchmark< Fibonacci >(runs, sequence_size, log);
+    Benchmark< Binomial >(runs, sequence_size, log);
+    Benchmark< Violation >(runs, sequence_size, log);
+    Benchmark< RPHeap >(runs, sequence_size, log);
+    AppendToFile("}", 0);
+
+
+    AppendToFile("{", 0);
+    Benchmark< Implicit >(runs, sequence_size, GenerateRandomInserts, log);
+    Benchmark< Explicit >(runs, sequence_size, GenerateRandomInserts, log);
+    Benchmark< Fibonacci >(runs, sequence_size, GenerateRandomInserts, log);
+    Benchmark< Binomial >(runs, sequence_size, GenerateRandomInserts, log);
+    Benchmark< Violation >(runs, sequence_size, GenerateRandomInserts, log);
+    Benchmark< RPHeap >(runs, sequence_size, GenerateRandomInserts, log);
     AppendToFile("}", 0);
     return 0;
 }

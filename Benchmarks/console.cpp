@@ -12,16 +12,16 @@ using bin = MC::BinomialHeap< int >;
 
 template < typename T >
 void f() {
-    std::string out = "I:21:-28\n"
-            "I:-8:-17\n"
-            "I:22:-26\n"
-            "I:12:1\n"
-            "E:32:-28\n"
-            "D:-21:-15\n"
-            "D:-8:-22\n"
-            "E:1:-13\n"
-            "D:15:8\n"
-            "E:-25:-18";
+    std::string out = "D:11:-17\n"
+            "I:11:9\n"
+            "D:-7:4\n"
+            "I:20:24\n"
+            "I:32:-27\n"
+            "I:3:12\n"
+            "D:-29:31\n"
+            "E:-10:-30\n"
+            "I:26:12\n"
+            "D:-7:-22";
 
     std::stringstream ss(out);
 
@@ -90,7 +90,7 @@ void f() {
 #ifdef STRING
 
 int main() {
-    f< vh >();
+    f< bin >();
     return 0;
 }
 
