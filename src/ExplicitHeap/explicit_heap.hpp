@@ -172,7 +172,7 @@ class ExplicitHeap : public HeapBase {
 public:
     using NodeType = Node;
 
-    ExplicitHeap() : HeapBase("Explicit heap") {}
+    ExplicitHeap() : HeapBase("binary (explicit) heap") {}
 
     bool Empty() const {
         return root == nullptr;

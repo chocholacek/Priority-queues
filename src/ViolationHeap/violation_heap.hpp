@@ -134,7 +134,7 @@ public:
 
     using NodeType = ViolationHeap::Node;
 
-    ViolationHeap() : HeapBase("Violation heap") {};
+    ViolationHeap() : HeapBase("violation heap") {};
 
     bool Empty() const { return count == 0; }
 
@@ -164,7 +164,6 @@ public:
 
         auto n = const_cast< Node* >(node);
         n->key = key;
-//        throw;
 
         // if is root stop; if key is smaller make it new min
         if (n->IsRoot()) {
@@ -222,15 +221,15 @@ public:
         std::unique_ptr< Node > ret(min);
         PromoteChildren(min);
 
-        --count;
-        if (count == 0) {
+        if (count == 1) {
+            count = 0;
             roots = nullptr;
             return ret;
         }
 
         roots = roots->next;
         Consolidate(min);
-
+        --count;
         return ret;
     }
 

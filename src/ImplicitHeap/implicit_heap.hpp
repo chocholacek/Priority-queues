@@ -70,7 +70,7 @@ class ImplicitHeap : public HeapBase {
 
 public:
     using NodeType = typename ImplicitHeap::Node;
-    ImplicitHeap() : HeapBase("Implicit heap") {
+    ImplicitHeap() : HeapBase("binary (implicit) heap") {
         array.reserve(4096);
     }
 

@@ -17,7 +17,7 @@ class BinomialHeap : public HeapBase {
 
         Node* parent = nullptr;
 
-        std::vector< Node* > children;
+        std::list< Node* > children;
 
         Node(int k, const Item& i) : key(k), item(i) {
         }
@@ -51,7 +51,7 @@ class BinomialHeap : public HeapBase {
 public:
     using NodeType = Node;
 
-    BinomialHeap() : HeapBase("BinomialHeap") {}
+    BinomialHeap() : HeapBase("binomial heap") {}
 
     bool Empty() const { return roots.empty(); }
 

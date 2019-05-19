@@ -5,6 +5,7 @@
 #include <BinomialHeap/binomial_heap.hpp>
 #include <ViolationHeap/violation_heap.hpp>
 #include <RankPairingHeap/rp_heap.hpp>
+#include <RankPairingHeap/rp_heap_t2.hpp>
 
 #include <functional>
 #include <random>
@@ -12,6 +13,7 @@
 #include <fstream>
 #include <iostream>
 #include <map>
+#include "benchmark.hpp"
 
 using std::ofstream;
 using std::chrono::high_resolution_clock;
@@ -25,193 +27,171 @@ using Explicit = MC::ExplicitHeap< TItem >;
 using Fibonacci = MC::FibonacciHeap< TItem >;
 using Binomial = MC::BinomialHeap< TItem >;
 using Violation = MC::ViolationHeap< TItem >;
-using RPHeap = MC::RankPairingHeap< TItem >;
+using RPHeap1 = MC::RankPairingHeap< TItem >;
+using RPHeap2 = MC::RankPairingHeap2< TItem >;
 
-struct OP {
-    enum class type {
-        Insert,
-        DecreaseKey,
-        ExtractMin
-    };
+using MC::Benchmark;
+using MC::OP;
 
-    type op;
-    int value;
-    int key;
-};
-
-ofstream file("wallclock_results.json");
-high_resolution_clock timer;
-std::vector< OP > operations;
 
 std::random_device r;
 std::mt19937_64 rng(r());
 std::uniform_int_distribution< TItem > uid(-32, 32);
 
-std::string indent(int i) {
-    return std::string(i, '\t');
-}
 
-
-void AppendToFile(const std::string& line, int i) {
-    file << indent(i) << line << std::endl;
-}
-
-void AppendToFile(const std::vector< microseconds >& results, int i) {
-    file << indent(i) << "\"results\": [";
-    for (unsigned i = 0; i < results.size(); ++i) {
-        file << results[i].count();
-        if (i != results.size() - 1)
-            file << ", ";
-    }
-    file << "]," << std::endl;
-}
-
-void GenerateRandomSequence(int size) {
-    operations.resize(size);
+std::vector< OP > GenerateRandomSequence(int size) {
+    std::vector< OP > operations(size);
     for (auto& op : operations) {
 
         op.op = static_cast< OP::type >((unsigned)uid(rng) % (sizeof(OP::type) - 1));
         op.value = uid(rng);
         op.key = uid(rng);
     }
+    return operations;
 }
 
-void GenerateRandomInserts(int size) {
-    operations.resize(size);
+std::vector< OP > GenerateRandomInserts(int size) {
+    std::vector< OP > operations(size);
     for (auto& op : operations) {
 
         op.op = OP::type::Insert;
         op.value = uid(rng);
         op.key = uid(rng);
     }
+    return operations;
 }
 
-std::map< OP::type , std::string > opmap = {
-        {OP::type::Insert, "I"},
-        {OP::type::DecreaseKey, "D"},
-        {OP::type::ExtractMin, "E"}
-};
+std::vector< OP > GenerateRandomSorting(int size) {
+    auto inserts = GenerateRandomInserts(size);
+    for (int i = 0; i < size; ++i) {
+        OP op;
+        op.op = OP::type::ExtractMin;
+        inserts.push_back(op);
+    }
 
-void LogOperations() {
-    ofstream log("last.txt");
-    for (auto op : operations) {
-        auto c = opmap[op.op];
-        if (c.empty())
-            c = "U" + std::to_string(static_cast< int >(op.op));
-        log <<  c + ":" + std::to_string(op.key) + ":" + std::to_string(op.value) << std::endl;
+    return inserts;
+}
+
+std::vector< OP > GenerateRandomInsertsDKs(int size) {
+    std::vector< OP > operations(size);
+	for (auto& op : operations) {
+        op.op = static_cast< OP::type >((unsigned)uid(rng) % (sizeof(OP::type) - 2));
+        op.value = uid(rng);
+        op.key = uid(rng);
+    }
+    return operations;
+}
+
+std::vector< OP > GenerateDKsWithNewMin(int size) {
+    auto half = size / 2;
+    std::vector< OP > operations(size);
+    for (int i = 0; i < half; ++i) {
+        OP op;
+        op.op = OP::type::Insert;
+        op.value = uid(rng);
+        op.key = std::abs(uid(rng));
+        operations[i] = op;
+    }
+    for (int i = half; i < size; ++i) {
+        OP op;
+        op.op = OP::type::DecreaseKey;
+        op.value = uid(rng);
+        op.key = -i;
+        operations[i] = op;
+    }
+    return operations;
+}
+
+
+std::map< std::string, double > averages;
+
+void NormalizeAverages() {
+    double min = std::min_element(
+            averages.begin(),
+            averages.end(),
+            [](const auto& it1, const auto& it2) {
+                return it1.second < it2.second;
+            })->second;
+
+    for (auto kv : averages) {
+        std::cout << kv.first << ": " << kv.second / min << std::endl;
     }
 }
 
-template < typename T >
-microseconds RunOperations() {
-    using Node = typename T::NodeType;
-    using uptr = std::unique_ptr< Node >;
-
-    std::list< const Node* > inserted;
-
-    T heap;
-
-    auto start = timer.now();
-    for (auto op : operations) {
-        try {
-
-            switch (op.op) {
-            case OP::type::Insert:
-                inserted.push_back(heap.Insert(op.key, op.value));
-                break;
-            case OP::type::DecreaseKey: {
-                if (inserted.empty()) {
-                    continue;
-                }
-
-                auto it = inserted.begin();
-                std::advance(it, op.value % inserted.size());
-                auto n = *it;
-                int k = n->key > op.key ? op.key : n->key - 1;
-                heap.DecreaseKey(n, k);
-                break;
-            }
-            case OP::type::ExtractMin: {
-                uptr p = heap.ExtractMin();
-                auto it = std::find(inserted.begin(), inserted.end(), p.get());
-                inserted.erase(it);
-                break;
-            }
-            }
-
-        } catch (const std::logic_error&) {}
+void PrintAverages() {
+    for (auto kv : averages) {
+        std::cout << kv.first << ": " << kv.second << std::endl;
     }
-
-    auto end = timer.now();
-
-    return duration_cast< microseconds >(end - start);
 }
 
-template < typename T, typename F >
-void Benchmark(int, int, F, bool log = false);
-
-template < typename T >
-void Benchmark(int iterations, int sequence, bool log = false) {
-    Benchmark< T >(iterations, sequence, GenerateRandomSequence, log);
+void Log(const std::vector< OP >& ops) {
+    std::ofstream last("last.txt");
+    for (auto op : ops) {
+        std::string t;
+        switch (op.op) {
+        case OP::type::Insert:
+            t = "I";
+            break;
+        case OP::type::ExtractMin:
+            t = "E";
+            break;
+        case OP::type::DecreaseKey:
+            t = "D";
+            break;
+        }
+        last << t << ":" << op.key << ":" <<  op.value << std::endl;
+    }
 }
 
-template < typename T, typename F >
-void Benchmark(int iterations, int sequence, F gen, bool log) {
-    std::vector< microseconds > results(iterations);
-    auto n = T().Name;
+template < typename Gen >
+void Run(int runs, int size, Gen g, bool log = false) {
+    Benchmark< Implicit > imp;
+    Benchmark< Explicit > exp;
+    Benchmark< Binomial > bin;
+    Benchmark< Fibonacci > fib;
+    Benchmark< Violation > vio;
+    Benchmark< RPHeap1 > rp1;
+    Benchmark< RPHeap2 > rp2;
 
-    std::cout << "Benchmark - " << n << ": ";
-    std::flush(std::cout);
-
-    auto start = timer.now();
-
-
-    AppendToFile("\"" + n + "\": {", 1);
-
-    for (int i = 0; i < iterations; ++i) {
-        gen(sequence);
+    for (int i = 0; i < runs; ++i) {
+        auto seq = g(size);
         if (log)
-            LogOperations();
-        results[i] = RunOperations< T >();
+            Log(seq);
+
+        imp.Run(seq);
+        exp.Run(seq);
+        bin.Run(seq);
+        fib.Run(seq);
+        vio.Run(seq);
+        rp1.Run(seq);
+        rp2.Run(seq);
     }
-    AppendToFile(results, 2);
 
-    auto accum = std::accumulate(results.begin(), results.end(), 0.0, [](auto a, auto b) {
-        return a + b.count();
-    });
-
-    AppendToFile("\"average\": " + std::to_string(accum / results.size()), 2);
-    AppendToFile("},", 1);
-
-    auto end = timer.now();
-    std::cout << duration_cast< milliseconds >(end - start).count() / 1000.0 << " s" << std::endl;
+    averages[imp.Name()] = imp.Average();
+    averages[exp.Name()] = exp.Average();
+    averages[bin.Name()] = bin.Average();
+    auto f = fib.Name();
+    std::transform(f.begin(), f.end(), f.begin(), [](char c) { return std::tolower(c) ;});
+    averages[f] = fib.Average();
+    averages[rp1.Name()] = rp1.Average();
+    averages[rp2.Name()] = rp2.Average();
+    averages[vio.Name()] = vio.Average();
 }
 
 
 int main() {
 
-    int runs = 1000;
-    int sequence_size = 1000;
+    int runs = 100;
+    int sequence_size = 100;
 
-    bool log = false;
-
-    AppendToFile("{", 0);
-    Benchmark< Implicit >(runs, sequence_size, log);
-    Benchmark< Explicit >(runs, sequence_size, log);
-    Benchmark< Fibonacci >(runs, sequence_size, log);
-    Benchmark< Binomial >(runs, sequence_size, log);
-    Benchmark< Violation >(runs, sequence_size, log);
-    Benchmark< RPHeap >(runs, sequence_size, log);
-    AppendToFile("}", 0);
-
-
-    AppendToFile("{", 0);
-    Benchmark< Implicit >(runs, sequence_size, GenerateRandomInserts, log);
-    Benchmark< Explicit >(runs, sequence_size, GenerateRandomInserts, log);
-    Benchmark< Fibonacci >(runs, sequence_size, GenerateRandomInserts, log);
-    Benchmark< Binomial >(runs, sequence_size, GenerateRandomInserts, log);
-    Benchmark< Violation >(runs, sequence_size, GenerateRandomInserts, log);
-    Benchmark< RPHeap >(runs, sequence_size, GenerateRandomInserts, log);
-    AppendToFile("}", 0);
+    std::cout << "Sequence size: " << sequence_size << ", runs: " << runs << std::endl;
+    std::cout << "--------------------------------------------------------" << std::endl;
+    Run(runs, sequence_size, GenerateRandomSequence);
+    std::cout << "Average:" << std::endl;
+    PrintAverages();
+    std::cout << "--------------------------------------------------------" << std::endl;
+    std::cout << "Normalized average:" << std::endl;
+    NormalizeAverages();
+    std::cout << "--------------------------------------------------------" << std::endl;
     return 0;
 }

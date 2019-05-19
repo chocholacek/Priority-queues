@@ -37,9 +37,9 @@ public:
 
         Vertex(Indices i) : indices(i) {}
 
-        Handle handle;
+        Handle handle = nullptr;
 
-        int dist = HeapType::Infinity;
+        int dist;
 
         Vertex* prev = nullptr;
 
@@ -181,6 +181,18 @@ public:
         return vertices[row][col];
     }
 
+    const Vertex& FirstVertex() const {
+        for (auto& v : vertices) {
+            if (!v.empty())
+                return v[0];
+        }
+        throw std::logic_error("no vertices");
+    }
+
+    const Vertex& LastVertex() const {
+        return vertices.back().back();
+    }
+
 
     void Load(const map_t& map) {
         int row = 0;
@@ -201,6 +213,14 @@ public:
 
     std::vector< std::vector< Vertex >> vertices;
 
+    void ResetDistances() {
+        for (auto& vector : vertices) {
+            for (auto &v : vector) {
+                v.dist = HeapType::Infinity;
+            }
+        }
+    }
+
     void Dijkstra(const Vertex& from, const Vertex& to) {
         auto f = from.indices;
         auto t = to.indices;
@@ -220,7 +240,8 @@ public:
             auto u = min->item;
 
             if (u->indices == t) {
-                break;
+                return;
+                //return ToPathVector(u);
             }
 
             for (auto v : u->neighbors) {
@@ -232,6 +253,7 @@ public:
                 }
             }
         }
+        throw std::logic_error("path not found");
     }
 
     void Dijkstra2(const Vertex& from, const Vertex& to) {
@@ -248,9 +270,11 @@ public:
         while (!h.Empty()) {
             auto min = h.ExtractMin();
             auto u = min->item;
+            u->handle = nullptr;
 
             if (u->indices == t)
-                break;
+                return;
+//                return ToPathVector(u);
 
             for (auto v : u->neighbors) {
                 int alt = u->dist + 1;
@@ -266,6 +290,23 @@ public:
                 }
             }
         }
+        throw std::logic_error("path not found");
+    }
+
+    std::vector< Indices > ToPathVector(const Vertex* u) {
+        std::vector< Indices > indices;
+        std::stack< const Vertex* > path;
+        while (u->prev) {
+            path.push(u);
+            u = u->prev;
+        }
+
+        while (path.empty()) {
+            indices.push_back(path.top()->indices);
+            path.pop();
+        }
+
+        return indices;
     }
 
 };

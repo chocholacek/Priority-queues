@@ -5,6 +5,9 @@
 
 namespace MC {
 
+template < typename >
+class RankPairingHeap2;
+
 template < typename Item >
 class RankPairingHeap : public HeapBase {
 protected:
@@ -60,10 +63,14 @@ protected:
     Node* root = nullptr;
     std::size_t size = 0;
 
+    RankPairingHeap(const std::string& n) : HeapBase(n) {}
+
+    template < typename > friend class RankPairingHeap2;
+
 public:
     using NodeType = RankPairingHeap::Node;
 
-    RankPairingHeap() : HeapBase("Rank-pairing heap") {}
+    RankPairingHeap() : HeapBase("rank-pairing heap t1") {}
 
     bool Empty() const {
         return size == 0;
@@ -110,7 +117,7 @@ public:
         std::for_each(buckets.begin(), buckets.end(), [this](auto n) {
             AddToRootList(n);
         });
-
+        --size;
         return ret;
     }
 
@@ -171,14 +178,19 @@ private:
         root = nullptr;
     }
 
-    // type-1 rank reduction
+
     void ReduceRanks(Node* n) {
         while (!n->IsRoot()) {
             int x = n->left ? n->left->rank : -1;
             int y = n->next ? n->next->rank : -1;
 
+#ifndef PAIRING2
+            // type-1 rank reduction
             int z = x != y ? std::max(x, y) : x + 1;
-
+#else
+            // type-2 rank reduction
+            int z = (std::abs(x- y) > 1) ? std::max(x, y) : std::max(x, y) + 1;
+#endif
             if (z >= n->rank)
                 break;
 
@@ -192,9 +204,11 @@ private:
         if (!n)
             return;
 
+        if (!n->next)
+            n->next = n;
+
         if (!root) {
             root = n;
-            n->next = n;
         } else {
             n->next = root->next;
             root->next = n;
@@ -204,7 +218,7 @@ private:
     }
 
     std::size_t MaxBuckets() const {
-        return std::ceil(std::log2(size)) + 1;
+        return std::ceil(std::log2(size)) + 2;
     }
 
     Node* Link(Node* x, Node* y) {
@@ -233,11 +247,6 @@ private:
         }
 
         buckets[n->rank] = n;
-    }
-
-    void Free(Node* n) {
-        delete n;
-        --size;
     }
 };
 
